@@ -16,22 +16,12 @@ Column {
   PanelSectionHeader { text: "DUCKDUCKGO EMAIL PROTECTION" }
 
   StatusBanner {
-    text: "Unofficial integration. DuckDuckGo may change or disable the API without notice."
-    warning: true
-  }
-
-  StatusBanner {
-    text: root.service && root.service.duckError ? String(root.service.duckError) : ""
-    error: true
-  }
-
-  Row {
-    visible: root.service && root.service.duckBusy
-    spacing: Style.space(8)
-    Text { text: "󰦖"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: Style.font.icon
-      RotationAnimator on rotation { from: 0; to: 360; duration: 800; loops: Animation.Infinite; running: parent.visible }
-    }
-    Text { text: "Working..."; color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.body }
+    reserveSpace: true
+    text: root.service && root.service.duckError
+      ? String(root.service.duckError)
+      : "Unofficial integration. DuckDuckGo may change this interface."
+    error: root.service && root.service.duckError !== ""
+    warning: !error
   }
 
   Column {
@@ -81,20 +71,18 @@ Column {
     spacing: Style.space(10)
 
     Button {
-      text: "Quick Generate"
-      iconText: "+"
+      readonly property bool generating: root.service.duckOperation === "generate"
+      width: Style.space(142)
+      text: !root.service.duckRemoteAvailable ? "Try Again"
+        : generating ? "Generating..." : "Create Alias"
+      iconText: generating ? "󰦖" : (!root.service.duckRemoteAvailable ? "󰑓" : "+")
+      iconSpinning: generating
       focusable: true
-      enabled: root.connected && root.service.duckRemoteAvailable && !root.service.duckBusy
-      onClicked: root.service.generateDuck()
-    }
-
-    Button {
-      visible: root.connected && !root.service.duckRemoteAvailable
-      text: "Try Again"
-      iconText: "󰑓"
-      focusable: true
-      enabled: !root.service.duckBusy
-      onClicked: root.service.retryDuckRequests()
+      enabled: root.connected && !root.service.actionBusy
+      onClicked: {
+        if (!root.service.duckRemoteAvailable) root.service.retryDuckRequests()
+        root.service.generateDuck()
+      }
     }
 
     PanelSeparator {}
@@ -112,44 +100,51 @@ Column {
 
     Repeater {
       model: root.service.knownDuckAliases || []
-      delegate: Rectangle {
+      delegate: AddressHistoryCard {
         required property var modelData
-        width: root.width
-        implicitHeight: duckRow.implicitHeight + Style.space(16)
-        radius: Style.cornerRadius
-        color: Util.alpha(Color.foreground, 0.05)
-        readonly property string address: String(modelData.address || "")
         readonly property bool activeAlias: modelData.active === true
-        readonly property string status: activeAlias ? "Active" : "Inactive"
-
-        Column {
-          id: duckRow
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.verticalCenter: parent.verticalCenter
-          anchors.margins: Style.space(8)
-          spacing: Style.space(6)
-
-          Row {
-            width: parent.width
-            Text { width: parent.width - statusText.width - Style.space(8); text: address; color: Color.foreground; font.family: Style.font.family; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideMiddle }
-            Text { id: statusText; text: status; color: activeAlias ? Color.accent : Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.caption }
+        readonly property bool refreshing: root.service.duckOperation === "status"
+          && root.service.duckTargetAddress === address
+        readonly property bool updating: root.service.duckOperation === "setActive"
+          && root.service.duckTargetAddress === address
+        providerLabel: "DuckDuckGo"
+        address: String(modelData.address || "")
+        statusText: activeAlias ? "Active" : "Inactive"
+        statusColor: activeAlias ? Color.accent : Color.muted
+        actions: [
+          {
+            id: "refresh",
+            width: Style.space(116),
+            text: refreshing ? "Refreshing..." : "Refresh",
+            icon: refreshing ? "󰦖" : "󰑓",
+            busy: refreshing,
+            enabled: root.connected && !root.service.actionBusy
+          },
+          {
+            id: "toggle",
+            width: Style.space(132),
+            text: updating ? "Updating..." : (activeAlias ? "Deactivate" : "Reactivate"),
+            icon: updating ? "󰦖" : "",
+            busy: updating,
+            destructive: activeAlias,
+            enabled: root.connected && root.service.duckRemoteAvailable && !root.service.actionBusy
           }
-          Row {
-            spacing: Style.space(4)
-            Button { text: "Copy"; focusable: true; onClicked: root.service.copyText(address) }
-            Button { text: "Refresh"; focusable: true; enabled: root.connected && !root.service.duckBusy; onClicked: root.service.refreshDuck(address) }
-            Button {
-              text: activeAlias ? "Deactivate" : "Reactivate"
-              focusable: true
-              foreground: activeAlias ? Color.urgent : Color.foreground
-              enabled: root.connected && root.service.duckRemoteAvailable && !root.service.duckBusy
-              onClicked: {
-                if (!activeAlias) root.service.setDuckActive(address, true)
-                else root.requestConfirmation("Deactivate " + address + "? It will stop forwarding messages.", function() { root.service.setDuckActive(address, false) }, "Deactivate")
-              }
-            }
-            Button { text: "Forget"; focusable: true; foreground: Color.urgent; onClicked: root.requestConfirmation("Forget " + address + " from this plugin?", function() { root.service.forgetDuck(address) }, "Forget") }
+        ]
+        onCopyRequested: root.service.copyText(address)
+        onForgetRequested: root.requestConfirmation(
+          "Forget " + address + " from this plugin?",
+          function() { root.service.forgetDuck(address) },
+          "Forget")
+        onActionRequested: function(actionId) {
+          if (actionId === "refresh") {
+            root.service.refreshDuck(address)
+          } else if (!activeAlias) {
+            root.service.setDuckActive(address, true)
+          } else {
+            root.requestConfirmation(
+              "Deactivate " + address + "? It will stop forwarding messages.",
+              function() { root.service.setDuckActive(address, false) },
+              "Deactivate")
           }
         }
       }

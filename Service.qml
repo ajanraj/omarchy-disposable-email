@@ -23,12 +23,20 @@ Item {
 
   property string duckCredentialState: "loading"
   readonly property bool duckBusy: duckAdapter.busy
+  readonly property string duckOperation: duckAdapter.operation !== ""
+    ? duckAdapter.operation : _pendingDuckOperation()
+  readonly property string duckTargetAddress: duckAdapter.targetAddress !== ""
+    ? duckAdapter.targetAddress : _pendingDuckTarget()
   property bool duckRemoteAvailable: true
   property string _duckError: ""
   readonly property string duckError: _duckError !== "" ? _duckError : duckAdapter.error
 
   property string simpleCredentialState: "loading"
   readonly property bool simpleBusy: simpleAdapter.busy
+  readonly property string simpleOperation: simpleAdapter.operation !== ""
+    ? simpleAdapter.operation : _pendingSimpleOperation()
+  readonly property int simpleTargetAliasId: simpleAdapter.operation !== ""
+    ? simpleAdapter.targetAliasId : _pendingSimpleTarget()
   property string _simpleError: ""
   readonly property string simpleError: _simpleError !== "" ? _simpleError : simpleAdapter.error
   property bool simpleStale: false
@@ -46,6 +54,41 @@ Item {
 
   property var _credentialTasks: []
   property var _credentialCurrent: null
+
+  function _pendingDuckOperation() {
+    var task = _credentialCurrent
+    if (!task || task.provider !== "duckduckgo") return ""
+    if (task.action === "duck-generate") return "generate"
+    if (task.action === "duck-status") return "status"
+    if (task.action === "duck-active") return "setActive"
+    return ""
+  }
+
+  function _pendingDuckTarget() {
+    var task = _credentialCurrent
+    return task && task.provider === "duckduckgo" && task.payload
+      ? String(task.payload.address || "") : ""
+  }
+
+  function _pendingSimpleOperation() {
+    var task = _credentialCurrent
+    if (!task || task.provider !== "simplelogin") return ""
+    var actions = {
+      "simple-list": "aliases",
+      "simple-random": "random",
+      "simple-options": "options",
+      "simple-custom": "custom",
+      "simple-pinned": "pinned",
+      "simple-toggle": "toggle"
+    }
+    return String(actions[task.action] || "")
+  }
+
+  function _pendingSimpleTarget() {
+    var task = _credentialCurrent
+    return task && task.provider === "simplelogin" && task.payload
+      ? Number(task.payload.aliasId || 0) : 0
+  }
 
   function _saveState(next) {
     stateStore.save(next)

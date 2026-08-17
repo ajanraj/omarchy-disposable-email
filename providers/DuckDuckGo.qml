@@ -6,6 +6,8 @@ QtObject {
     id: root
 
     readonly property bool busy: curlProcess.running
+    readonly property string operation: _operation
+    readonly property string targetAddress: _localPart === "" ? "" : _localPart + "@duck.com"
     property string error: ""
     property string _operation: ""
     property string _config: ""

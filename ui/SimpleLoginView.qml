@@ -52,23 +52,14 @@ Column {
   PanelSectionHeader { text: "SIMPLELOGIN" }
 
   StatusBanner {
-    text: root.service && root.service.simpleError ? String(root.service.simpleError) : ""
-    error: true
-  }
-
-  StatusBanner {
-    visible: root.configured && root.service.simpleStale
-    text: "Showing cached aliases. Last successful refresh: " + String(root.service.simpleLastRefresh || "unknown")
-    warning: true
-  }
-
-  Row {
-    visible: root.service && root.service.simpleBusy
-    spacing: Style.space(8)
-    Text { text: "󰦖"; color: Color.foreground; font.family: Style.font.family; font.pixelSize: Style.font.icon
-      RotationAnimator on rotation { from: 0; to: 360; duration: 800; loops: Animation.Infinite; running: parent.visible }
-    }
-    Text { text: "Working..."; color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.body }
+    reserveSpace: true
+    text: root.service && root.service.simpleError
+      ? String(root.service.simpleError)
+      : root.service && root.service.simpleStale
+        ? "Showing cached aliases. Refresh to try again."
+        : root.connected ? "SimpleLogin connected." : "Connect an API key to manage aliases."
+    error: root.service && root.service.simpleError !== ""
+    warning: !error && root.service && root.service.simpleStale
   }
 
   Column {
@@ -120,17 +111,23 @@ Column {
     Row {
       spacing: Style.space(6)
       Button {
-        text: "Random Alias"
-        iconText: "+"
+        readonly property bool creating: root.service.simpleOperation === "random"
+        width: Style.space(132)
+        text: creating ? "Creating..." : "Random Alias"
+        iconText: creating ? "󰦖" : "+"
+        iconSpinning: creating
         focusable: true
-        enabled: root.connected && root.service.simpleCanCreate && !root.service.simpleBusy
+        enabled: root.connected && root.service.simpleCanCreate && !root.service.actionBusy
         onClicked: root.service.createSimpleRandom()
       }
       Button {
-        text: root.customVisible ? "Cancel Custom" : "Custom Alias"
-        iconText: "󰅖"
+        readonly property bool loading: root.service.simpleOperation === "options"
+        width: Style.space(132)
+        text: loading ? "Loading..." : (root.customVisible ? "Cancel Custom" : "Custom Alias")
+        iconText: loading ? "󰦖" : "󰅖"
+        iconSpinning: loading
         focusable: true
-        enabled: root.connected && root.service.simpleCanCreate && !root.service.simpleBusy
+        enabled: root.connected && root.service.simpleCanCreate && !root.service.actionBusy
         onClicked: {
           root.customVisible = !root.customVisible
           if (root.customVisible) root.service.prepareSimpleCustom()
@@ -166,10 +163,13 @@ Column {
       TextField { id: nameField; width: parent.width; placeholderText: "Name (optional)" }
       TextField { id: noteField; width: parent.width; placeholderText: "Note (optional)" }
       Button {
-        text: "Create Custom Alias"
-        iconText: "+"
+        readonly property bool creating: root.service.simpleOperation === "custom"
+        width: Style.space(178)
+        text: creating ? "Creating..." : "Create Custom Alias"
+        iconText: creating ? "󰦖" : "+"
+        iconSpinning: creating
         focusable: true
-        enabled: root.connected && prefixField.text.trim().length > 0 && suffixDropdown.value !== "" && root.selectedMailboxIds.length > 0 && !root.service.simpleBusy
+        enabled: root.connected && prefixField.text.trim().length > 0 && suffixDropdown.value !== "" && root.selectedMailboxIds.length > 0 && !root.service.actionBusy
         onClicked: {
           var mailboxIds = []
           for (var i = 0; i < root.selectedMailboxIds.length; i++)
@@ -216,9 +216,10 @@ Column {
       PanelActionButton {
         id: refreshButton
         iconText: "󰑓"
-        tooltipText: "Refresh aliases"
+        iconSpinning: root.service.simpleOperation === "aliases"
+        tooltipText: root.service.simpleOperation === "aliases" ? "Refreshing aliases" : "Refresh aliases"
         focusable: true
-        enabled: root.connected && !root.service.simpleBusy
+        enabled: root.connected && !root.service.actionBusy
         onClicked: root.refresh()
       }
     }
@@ -235,45 +236,52 @@ Column {
 
     Repeater {
       model: root.service.simpleAliases || []
-      delegate: Rectangle {
+      delegate: AddressHistoryCard {
         required property var modelData
-        width: root.width
-        implicitHeight: aliasRow.implicitHeight + Style.space(16)
-        radius: Style.cornerRadius
-        color: Util.alpha(Color.foreground, 0.05)
-        readonly property string address: String(modelData.email || "")
         readonly property bool enabledAlias: modelData.enabled === true
         readonly property bool pinnedAlias: modelData.pinned === true
         readonly property string mailbox: root.mailboxText(modelData.mailboxes || [])
         readonly property string counters: root.counterText(modelData)
-
-        Column {
-          id: aliasRow
-          anchors.left: parent.left
-          anchors.right: parent.right
-          anchors.verticalCenter: parent.verticalCenter
-          anchors.margins: Style.space(8)
-          spacing: Style.space(5)
-          Row {
-            width: parent.width
-            Text { width: parent.width - stateText.width - Style.space(8); text: address; color: Color.foreground; font.family: Style.font.family; font.pixelSize: Style.font.body; font.bold: true; elide: Text.ElideMiddle }
-            Text { id: stateText; text: enabledAlias ? "Enabled" : "Disabled"; color: enabledAlias ? Color.accent : Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.caption }
+        readonly property bool savingPin: root.service.simpleOperation === "pinned"
+          && root.service.simpleTargetAliasId === Number(modelData.id)
+        readonly property bool updating: root.service.simpleOperation === "toggle"
+          && root.service.simpleTargetAliasId === Number(modelData.id)
+        providerLabel: "SimpleLogin"
+        address: String(modelData.email || "")
+        statusText: enabledAlias ? "Enabled" : "Disabled"
+        statusColor: enabledAlias ? Color.accent : Color.muted
+        detailText: "Mailbox: " + mailbox + (counters ? "  |  " + counters : "")
+        showForget: false
+        actions: [
+          {
+            id: "pin",
+            width: Style.space(104),
+            text: savingPin ? "Saving..." : (pinnedAlias ? "Unpin" : "Pin"),
+            icon: savingPin ? "󰦖" : "",
+            busy: savingPin,
+            enabled: root.connected && !root.service.actionBusy
+          },
+          {
+            id: "toggle",
+            width: Style.space(112),
+            text: updating ? "Updating..." : (enabledAlias ? "Disable" : "Enable"),
+            icon: updating ? "󰦖" : "",
+            busy: updating,
+            destructive: enabledAlias,
+            enabled: root.connected && !root.service.actionBusy
           }
-          Text { width: parent.width; text: "Mailbox: " + mailbox + (counters ? "  |  " + counters : ""); color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.caption; elide: Text.ElideRight }
-          Row {
-            spacing: Style.space(4)
-            Button { text: "Copy"; focusable: true; onClicked: root.service.copyText(address) }
-            Button { text: pinnedAlias ? "Unpin" : "Pin"; focusable: true; enabled: root.connected; onClicked: root.service.setSimplePinned(modelData, !pinnedAlias) }
-            Button {
-              text: enabledAlias ? "Disable" : "Enable"
-              focusable: true
-              enabled: root.connected
-              foreground: enabledAlias ? Color.urgent : Color.foreground
-              onClicked: {
-                if (!enabledAlias) root.service.toggleSimpleAlias(modelData)
-                else root.requestConfirmation("Disable " + address + "? It will stop forwarding messages.", function() { root.service.toggleSimpleAlias(modelData) }, "Disable")
-              }
-            }
+        ]
+        onCopyRequested: root.service.copyText(address)
+        onActionRequested: function(actionId) {
+          if (actionId === "pin") {
+            root.service.setSimplePinned(modelData, !pinnedAlias)
+          } else if (!enabledAlias) {
+            root.service.toggleSimpleAlias(modelData)
+          } else {
+            root.requestConfirmation(
+              "Disable " + address + "? It will stop forwarding messages.",
+              function() { root.service.toggleSimpleAlias(modelData) },
+              "Disable")
           }
         }
       }
@@ -282,9 +290,9 @@ Column {
     Row {
       anchors.horizontalCenter: parent.horizontalCenter
       spacing: Style.space(8)
-      Button { text: "Previous"; focusable: true; enabled: root.connected && root.page > 0 && !root.service.simpleBusy; onClicked: { root.page--; root.refresh() } }
+      Button { text: "Previous"; focusable: true; enabled: root.connected && root.page > 0 && !root.service.actionBusy; onClicked: { root.page--; root.refresh() } }
       Text { text: "Page " + (root.page + 1); color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.body; anchors.verticalCenter: parent.verticalCenter }
-      Button { text: "Next"; focusable: true; enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.simpleBusy; onClicked: { root.page++; root.refresh() } }
+      Button { text: "Next"; focusable: true; enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.actionBusy; onClicked: { root.page++; root.refresh() } }
     }
 
     PanelSeparator {}

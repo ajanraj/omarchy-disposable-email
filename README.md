@@ -187,6 +187,7 @@ in their provider accounts and must be managed through the provider itself.
 The state model is pure JavaScript and can be tested without a running shell:
 
 ```bash
+node tests/ui_contract.test.js
 node tests/state_model.test.js
 qmllint lib/CredentialStore.qml lib/StateStore.qml
 ```

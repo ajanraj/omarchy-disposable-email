@@ -6,11 +6,12 @@ Rectangle {
   property string text: ""
   property bool error: false
   property bool warning: false
+  property bool reserveSpace: false
   property color foreground: Color.foreground
 
-  visible: text !== ""
+  visible: reserveSpace || text !== ""
   width: parent ? parent.width : implicitWidth
-  implicitHeight: message.implicitHeight + Style.space(16)
+  implicitHeight: reserveSpace ? Style.space(38) : message.implicitHeight + Style.space(16)
   radius: Style.cornerRadius
   color: error ? Util.alpha(Color.urgent, 0.16)
     : warning ? Util.alpha(Color.accent, 0.12)
@@ -24,6 +25,8 @@ Rectangle {
     color: root.error ? Color.urgent : root.foreground
     font.family: Style.font.family
     font.pixelSize: Style.font.bodySmall
-    wrapMode: Text.WordWrap
+    verticalAlignment: Text.AlignVCenter
+    wrapMode: root.reserveSpace ? Text.NoWrap : Text.WordWrap
+    elide: root.reserveSpace ? Text.ElideRight : Text.ElideNone
   }
 }

@@ -52,6 +52,8 @@ Publish an Omarchy Quattro plugin named Disposable Email with ID `io.github.ajan
 
 - Follow native Omarchy styling and keyboard behavior, including Escape dismissal and visible focus states.
 - Keep provider connection controls inside their provider view. Show global plugin data controls only through the settings button.
+- Use one shared address card style across providers. Keep Copy, Open, and Forget in consistent positions, then append provider-specific actions.
+- Communicate request progress inside the control that started it. Keep status space stable so busy, error, and stale states do not reflow the panel.
 - Use generic icons and provider names, not bundled provider logos.
 - Show concise busy, failure, stale, and privacy states.
 - Document dependencies, credential setup, public inbox risk, unofficial API risk, state locations, Secret Service caveats, removal behavior, manual cleanup, limitations, and validation commands.

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.ajanraj.disposable-email",
+  "name": "Disposable Email",
+  "version": "0.1.0",
+  "author": "Ajan Raj",
+  "license": "MIT",
+  "description": "Create temporary addresses and forwarding aliases from the Omarchy bar.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Disposable Email",
+    "description": "Temporary addresses and forwarding aliases.",
+    "category": "Internet",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

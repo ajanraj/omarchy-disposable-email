@@ -1,0 +1,4 @@
+module DisposableEmail.Providers
+TemporaryAddress 1.0 TemporaryAddress.qml
+DuckDuckGo 1.0 DuckDuckGo.qml
+SimpleLogin 1.0 SimpleLogin.qml

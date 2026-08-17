@@ -1,0 +1,3 @@
+{"can_create":true,"prefix_suggestion":"shop","suffixes":[{"suffix":".cat@simplelogin.com","signed_suffix":"signed"}]}
+__OMARCHY_DISPOSABLE_EMAIL_HTTP_614e7d__:200{"mailboxes":[{"id":1,"email":"verified@example.com","verified":true},{"id":2,"email":"pending@example.com","verified":false}]}
+__OMARCHY_DISPOSABLE_EMAIL_HTTP_614e7d__:200

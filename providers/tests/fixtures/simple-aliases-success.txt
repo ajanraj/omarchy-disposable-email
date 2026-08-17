@@ -1,0 +1,2 @@
+{"aliases":[{"id":7,"email":"orders@example.com","enabled":false,"pinned":true,"mailboxes":[{"id":1,"email":"owner@example.com"}],"nb_forward":3,"nb_reply":2,"nb_block":1}]}
+__OMARCHY_DISPOSABLE_EMAIL_HTTP_614e7d__:200

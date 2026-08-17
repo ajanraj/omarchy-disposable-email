@@ -213,8 +213,10 @@ Column {
           root.refresh()
         }
       }
-      PanelActionButton {
+      Button {
         id: refreshButton
+        width: Style.space(36)
+        text: ""
         iconText: "󰑓"
         iconSpinning: root.service.simpleOperation === "aliases"
         tooltipText: root.service.simpleOperation === "aliases" ? "Refreshing aliases" : "Refresh aliases"

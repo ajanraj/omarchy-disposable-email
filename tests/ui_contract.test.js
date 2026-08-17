@@ -15,4 +15,6 @@ for (const view of views) {
     assert.doesNotMatch(source, /text:\s*"Working\.\.\."/)
 }
 
+assert.doesNotMatch(read("DuckView.qml"), /Unofficial integration/)
+
 console.log("UI contract tests passed")

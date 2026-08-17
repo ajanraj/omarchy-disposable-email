@@ -19,9 +19,10 @@ Column {
     reserveSpace: true
     text: root.service && root.service.duckError
       ? String(root.service.duckError)
-      : "Unofficial integration. DuckDuckGo may change this interface."
+      : root.connected
+        ? "DuckDuckGo Email Protection connected."
+        : "Connect a bearer token to create private Duck addresses."
     error: root.service && root.service.duckError !== ""
-    warning: !error
   }
 
   Column {

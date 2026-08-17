@@ -65,7 +65,6 @@ Panel {
     owner: root.barIdentity
     bar: root.bar
     open: root.opened
-    centerOnBar: true
     focusTarget: keySurface
     contentWidth: panel.fittedContentWidth(Style.space(560))
     contentHeight: panel.cappedContentHeight(Style.space(680))

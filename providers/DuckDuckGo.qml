@@ -107,10 +107,5 @@ QtObject {
             root._config = ""
             root._finish(stdout.text, exitCode)
         }
-
-        onErrorOccurred: {
-            root._config = ""
-            if (root._operation !== "") root._finish("", -1)
-        }
     }
 }

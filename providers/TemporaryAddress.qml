@@ -54,10 +54,5 @@ QtObject {
             }
             root.created(parsed.value)
         }
-
-        onErrorOccurred: {
-            root._provider = ""
-            root.error = "Could not start uuidgen"
-        }
     }
 }

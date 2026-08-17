@@ -154,5 +154,18 @@ Column {
         }
       }
     }
+
+    PanelSeparator {}
+    Button {
+      text: "Disconnect DuckDuckGo"
+      iconText: "󰌙"
+      focusable: true
+      enabled: !root.service.actionBusy
+      foreground: Color.urgent
+      onClicked: root.requestConfirmation(
+        "Disconnect DuckDuckGo and remove its saved token? Known aliases will be forgotten locally.",
+        function() { root.service.disconnectProvider("duckduckgo") },
+        "Disconnect")
+    }
   }
 }

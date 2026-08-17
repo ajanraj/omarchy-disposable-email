@@ -286,5 +286,18 @@ Column {
       Text { text: "Page " + (root.page + 1); color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.body; anchors.verticalCenter: parent.verticalCenter }
       Button { text: "Next"; focusable: true; enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.simpleBusy; onClicked: { root.page++; root.refresh() } }
     }
+
+    PanelSeparator {}
+    Button {
+      text: "Disconnect SimpleLogin"
+      iconText: "󰌙"
+      focusable: true
+      enabled: !root.service.actionBusy
+      foreground: Color.urgent
+      onClicked: root.requestConfirmation(
+        "Disconnect SimpleLogin and remove its saved API key? Cached aliases will be cleared.",
+        function() { root.service.disconnectProvider("simplelogin") },
+        "Disconnect")
+    }
   }
 }

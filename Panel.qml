@@ -13,6 +13,7 @@ Panel {
   property var hostWidget: null
   property var service: null
   property int activeTab: tabIndex(service ? service.lastTab : "temporary")
+  property bool settingsVisible: false
   readonly property var barIdentity: hostWidget || root
   readonly property color foreground: bar ? bar.foreground : Color.popups.text
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
@@ -24,6 +25,7 @@ Panel {
   }
 
   function selectTab(index) {
+    settingsVisible = false
     activeTab = Math.max(0, Math.min(2, index))
     if (!service) return
     var tabs = ["temporary", "duckduckgo", "simplelogin"]
@@ -38,6 +40,7 @@ Panel {
   }
 
   function open() {
+    settingsVisible = false
     controller.show()
     Qt.callLater(refreshActiveTab)
   }
@@ -105,15 +108,26 @@ Panel {
             Button {
               required property var modelData
               required property int index
-              width: (tabs.width - tabs.spacing * 2) / 3
+              width: (tabs.width - settingsButton.width - tabs.spacing * 3) / 3
               text: modelData.label
               iconText: modelData.icon
-              selected: root.activeTab === index
+              selected: !root.settingsVisible && root.activeTab === index
               focusable: true
               horizontalPadding: Style.space(5)
               fontSize: Style.font.caption
               onClicked: root.selectTab(index)
             }
+          }
+
+          Button {
+            id: settingsButton
+            width: Style.space(36)
+            text: ""
+            iconText: ""
+            tooltipText: "Plugin settings"
+            selected: root.settingsVisible
+            focusable: true
+            onClicked: root.settingsVisible = true
           }
         }
 
@@ -155,16 +169,11 @@ Panel {
               Loader {
                 id: viewLoader
                 width: parent.width
-                sourceComponent: root.activeTab === 0 ? temporaryView
+                sourceComponent: !root.service ? null
+                  : root.settingsVisible ? settingsView
+                  : root.activeTab === 0 ? temporaryView
                   : root.activeTab === 1 ? duckView
                   : simpleView
-              }
-
-              PanelSeparator { foreground: root.foreground }
-              SettingsView {
-                width: parent.width
-                service: root.service
-                requestConfirmation: root.confirm
               }
             }
           }
@@ -174,6 +183,7 @@ Panel {
       Component { id: temporaryView; TemporaryView { service: root.service; requestConfirmation: root.confirm } }
       Component { id: duckView; DuckView { service: root.service; requestConfirmation: root.confirm } }
       Component { id: simpleView; SimpleLoginView { service: root.service; requestConfirmation: root.confirm } }
+      Component { id: settingsView; SettingsView { service: root.service; requestConfirmation: root.confirm } }
       ConfirmDialog {
         id: confirmDialog
         anchors.fill: parent

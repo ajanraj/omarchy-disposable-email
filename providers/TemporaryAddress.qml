@@ -5,7 +5,7 @@ import "TemporaryAddress.js" as TemporaryAddressHelper
 QtObject {
     id: root
 
-    readonly property bool busy: uuidProcess.running
+    readonly property bool busy: randomProcess.running
     property string error: ""
     property string _provider: ""
 
@@ -23,30 +23,30 @@ QtObject {
 
         error = ""
         _provider = provider
-        uuidProcess.running = true
+        randomProcess.running = true
         return true
     }
 
-    property Process uuidProcess: Process {
-        command: ["/usr/bin/uuidgen"]
+    property Process randomProcess: Process {
+        command: ["/usr/bin/openssl", "rand", "-base64", "12"]
         stdout: StdioCollector {}
         stderr: StdioCollector {}
 
         onRunningChanged: {
             if (!running && root._provider !== "") {
-                root.error = "Could not start uuidgen"
+                root.error = "Could not start openssl"
                 root._provider = ""
             }
         }
 
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0) {
-                root.error = "Could not create a UUID"
+                root.error = "Could not create a short address ID"
                 root._provider = ""
                 return
             }
 
-            var parsed = TemporaryAddressHelper.fromUuid(root._provider, stdout.text)
+            var parsed = TemporaryAddressHelper.fromRandom(root._provider, stdout.text)
             root._provider = ""
             if (!parsed.ok) {
                 root.error = parsed.error

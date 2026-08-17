@@ -2,8 +2,9 @@
 
 Disposable Email adds one Omarchy bar widget with three provider workflows:
 
-1. **Temporary Address** creates a provider-hosted address with `uuidgen` and
-   opens the public inbox. It supports [Maildrop](https://maildrop.cc/) and
+1. **Temporary Address** creates a provider-hosted address with a short,
+   cryptographically random Nano ID style local part. It keeps a local history
+   with Copy, Open, and Forget actions for each address. It supports [Maildrop](https://maildrop.cc/) and
    [Harakiri Mail](https://harakirimail.com/). These inboxes are public: anyone
    who knows the address may be able to read messages, and forgetting an
    address here does not remove it from the provider.
@@ -42,14 +43,14 @@ The runtime dependencies are:
 
 - `curl` for provider HTTP requests
 - `wl-copy` for copying an address
-- `uuidgen` for temporary address local parts
+- `openssl` for cryptographically random temporary address local parts
 - `secret-tool` for Secret Service credentials
 
 `gio` is also used in the manual cleanup example below. Check the executable
 paths before enabling the plugin:
 
 ```bash
-for command in curl wl-copy uuidgen secret-tool gio; do
+for command in curl wl-copy openssl secret-tool gio; do
   command -v "$command" || exit 1
 done
 ```
@@ -92,14 +93,15 @@ Persistent UI state is stored at:
 ${XDG_STATE_HOME:-$HOME/.local/state}/io.github.ajanraj.disposable-email/state.json
 ```
 
-The version 1 JSON shape is exactly:
+The version 2 JSON shape is exactly this. Version 1 state is migrated on load so a
+previously remembered temporary address becomes the first history item.
 
 | Key | Value | Meaning |
 | --- | --- | --- |
-| `version` | `1` | State schema version |
+| `version` | `2` | State schema version |
 | `lastTab` | `temporary`, `duckduckgo`, or `simplelogin` | Last selected provider tab |
 | `temporaryProvider` | `maildrop` or `harakiri` | Selected temporary address provider |
-| `temporaryAddress` | `null` or `{provider, localPart, address, inboxUrl}` | The one temporary address remembered locally |
+| `temporaryAddresses` | Array of `{provider, localPart, address, inboxUrl}` | Temporary address history, newest first |
 | `knownDuckAliases` | Array of `{address, localPart, active}` records | Duck aliases created by this plugin and remembered locally |
 
 No token, API key, mailbox credential, message body, or remote alias inventory
@@ -126,7 +128,7 @@ are rejected rather than mixed.
 ## Reset and removal
 
 Use **Settings > Reset Plugin Data** before removing the plugin. Reset clears
-local preferences, the remembered temporary address, known Duck aliases, and
+local preferences, temporary address history, known Duck aliases, and
 both stored credentials. It does not affect remote aliases or public provider
 inboxes. There is no uninstall hook, so removing a plugin directory cannot
 automatically clean user data or Secret Service items.

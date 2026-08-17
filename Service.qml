@@ -15,7 +15,7 @@ Item {
 
   readonly property string lastTab: stateStore.state ? stateStore.state.lastTab : "temporary"
   readonly property string temporaryProvider: stateStore.state ? stateStore.state.temporaryProvider : "maildrop"
-  readonly property var temporaryAddress: stateStore.state ? stateStore.state.temporaryAddress : null
+  readonly property var temporaryAddresses: stateStore.state ? stateStore.state.temporaryAddresses : []
   readonly property var knownDuckAliases: stateStore.state ? stateStore.state.knownDuckAliases : []
 
   readonly property bool temporaryBusy: temporaryAdapter.busy
@@ -63,12 +63,8 @@ Item {
     temporaryAdapter.create(temporaryProvider)
   }
 
-  function replaceTemporary() {
-    temporaryAdapter.create(temporaryProvider)
-  }
-
-  function forgetTemporary() {
-    _saveState(StateModel.clearTemporaryAddress(stateStore.state))
+  function forgetTemporary(address) {
+    _saveState(StateModel.removeTemporaryAddress(stateStore.state, address))
   }
 
   function copyText(value) {
@@ -441,9 +437,8 @@ Item {
     id: temporaryAdapter
 
     onCreated: function(result) {
-      root._saveState(StateModel.setTemporaryAddress(stateStore.state, result))
+      root._saveState(StateModel.addTemporaryAddress(stateStore.state, result))
       root.copyText(result.address)
-      root.openUrl(result.inboxUrl)
     }
   }
 

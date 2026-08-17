@@ -7,10 +7,10 @@ Publish an Omarchy Quattro plugin named Disposable Email with ID `io.github.ajan
 ## Temporary
 
 - Support Maildrop and Harakiri, with Maildrop as the first-run default.
-- Generate a UUID local part, copy the address, and open the provider-hosted public inbox.
-- Remember one current address across shell restarts.
-- Provide Copy, Open Inbox, Replace, and Forget.
-- Confirm Replace and Forget. Neither action deletes the provider inbox.
+- Generate a short Nano ID style local part with cryptographic randomness and copy the address.
+- Keep a local history across shell restarts with the provider shown on every row.
+- Provide Copy, Open, and Forget for each history item. Creation does not force the browser open.
+- Confirm Forget. It does not delete the provider inbox.
 - State clearly that the inbox is public.
 - Do not embed messages or add Mail.tm in v0.1.
 
@@ -40,7 +40,7 @@ Publish an Omarchy Quattro plugin named Disposable Email with ID `io.github.ajan
 
 - Use a singleton Quickshell service as the shared state owner across monitors, with no background polling.
 - Keep Temporary, DuckDuckGo, and SimpleLogin as provider-specific modules.
-- Persist only last tab, temporary provider, current temporary address, and Known Duck Aliases under XDG state.
+- Persist only last tab, temporary provider, temporary address history, and Known Duck Aliases under XDG state.
 - Store no credential in the repository, manifest, shell settings, state, environment, process arguments, temporary files, or logs.
 - Use Secret Service through `secret-tool`. Write credential values through stdin without a trailing newline.
 - Pass HTTP authorization to curl through stdin with static argv and hard timeouts.
@@ -51,6 +51,7 @@ Publish an Omarchy Quattro plugin named Disposable Email with ID `io.github.ajan
 ## UX and publishing
 
 - Follow native Omarchy styling and keyboard behavior, including Escape dismissal and visible focus states.
+- Keep provider connection controls inside their provider view. Show global plugin data controls only through the settings button.
 - Use generic icons and provider names, not bundled provider logos.
 - Show concise busy, failure, stale, and privacy states.
 - Document dependencies, credential setup, public inbox risk, unofficial API risk, state locations, Secret Service caveats, removal behavior, manual cleanup, limitations, and validation commands.

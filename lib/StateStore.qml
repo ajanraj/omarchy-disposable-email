@@ -37,9 +37,14 @@ QtObject {
 
         try {
             var parsed = JSON.parse(text)
-            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed) || parsed.version !== 1)
+            if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)
+                    || (parsed.version !== 1 && parsed.version !== StateModel.VERSION))
                 return { value: StateModel.defaults(), valid: false }
-            return { value: StateModel.parse(parsed), valid: true }
+            return {
+                value: StateModel.parse(parsed),
+                valid: true,
+                migrated: parsed.version !== StateModel.VERSION
+            }
         } catch (error) {
             return { value: StateModel.defaults(), valid: false }
         }
@@ -55,6 +60,8 @@ QtObject {
         if (!decoded.valid)
             loadFailed("State file is malformed; using defaults")
         loaded(root.state)
+        if (decoded.migrated)
+            Qt.callLater(function() { root.save(root.state) })
     }
 
     function _loadFailed(error) {

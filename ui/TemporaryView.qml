@@ -9,11 +9,11 @@ Column {
   width: parent ? parent.width : implicitWidth
   spacing: Style.space(12)
 
-  readonly property var current: service ? service.temporaryAddress : null
-  readonly property string address: current && current.address ? String(current.address) : ""
-  readonly property string inboxUrl: current
-    ? String(current.inboxUrl || current.url || "")
-    : ""
+  readonly property var history: service ? service.temporaryAddresses : []
+
+  function providerName(provider) {
+    return provider === "harakiri" ? "Harakiri" : "Maildrop"
+  }
 
   PanelSectionHeader { text: "TEMPORARY ADDRESS" }
 
@@ -40,85 +40,103 @@ Column {
     wrapMode: Text.WordWrap
   }
 
-  Dropdown {
+  Row {
     width: parent.width
-    label: "Provider"
-    value: root.service ? String(root.service.temporaryProvider || "maildrop") : "maildrop"
-    options: [
-      { value: "maildrop", label: "Maildrop" },
-      { value: "harakiri", label: "Harakiri" }
-    ]
-    onChanged: function(value) { root.service.setTemporaryProvider(value) }
-  }
-
-  Column {
-    visible: root.address !== ""
-    width: parent.width
-    spacing: Style.space(8)
-
-    Text {
-      width: parent.width
-      text: root.address
-      color: Color.foreground
-      font.family: Style.font.family
-      font.pixelSize: Style.font.subtitle
-      font.bold: true
-      elide: Text.ElideMiddle
+    spacing: Style.space(6)
+    Dropdown {
+      width: parent.width - createButton.width - parent.spacing
+      showLabel: false
+      value: root.service ? String(root.service.temporaryProvider || "maildrop") : "maildrop"
+      options: [
+        { value: "maildrop", label: "Maildrop" },
+        { value: "harakiri", label: "Harakiri" }
+      ]
+      onChanged: function(value) { root.service.setTemporaryProvider(value) }
     }
-
-    Row {
-      spacing: Style.space(6)
-      Button {
-        text: "Copy"
-        iconText: ""
-        focusable: true
-        onClicked: root.service.copyText(root.address)
-      }
-      Button {
-        text: "Open Inbox"
-        iconText: ""
-        focusable: true
-        enabled: root.inboxUrl !== ""
-        onClicked: root.service.openUrl(root.inboxUrl)
-      }
+    Button {
+      id: createButton
+      text: "Create"
+      iconText: "+"
+      focusable: true
+      enabled: !root.service.temporaryBusy
+      onClicked: root.service.createTemporary()
     }
   }
+
+  PanelSeparator {}
+  PanelSectionHeader { text: "HISTORY" }
 
   Text {
-    visible: root.address === ""
+    visible: !root.history || root.history.length === 0
     width: parent.width
-    text: "No temporary address yet."
+    text: "Create an address to start your history."
     color: Color.muted
     font.family: Style.font.family
     font.pixelSize: Style.font.body
     horizontalAlignment: Text.AlignHCenter
   }
 
-  Row {
-    spacing: Style.space(6)
-    Button {
-      text: root.address === "" ? "Create Address" : "Replace Address"
-      iconText: root.address === "" ? "+" : "󰑓"
-      focusable: true
-      enabled: !root.service.temporaryBusy
-      onClicked: {
-        if (root.address === "") root.service.createTemporary()
-        else root.requestConfirmation(
-          "Replace the current temporary address? The previous address will be forgotten by this plugin.",
-          function() { root.service.replaceTemporary() },
-          "Replace")
+  Repeater {
+    model: root.history || []
+    delegate: Rectangle {
+      required property var modelData
+      width: root.width
+      implicitHeight: historyRow.implicitHeight + Style.space(16)
+      radius: Style.cornerRadius
+      color: Util.alpha(Color.foreground, 0.05)
+      readonly property string address: String(modelData.address || "")
+      readonly property string inboxUrl: String(modelData.inboxUrl || "")
+      readonly property string providerLabel: root.providerName(String(modelData.provider || ""))
+
+      Column {
+        id: historyRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.margins: Style.space(8)
+        spacing: Style.space(6)
+
+        Rectangle {
+          implicitWidth: providerText.implicitWidth + Style.space(12)
+          implicitHeight: providerText.implicitHeight + Style.space(5)
+          radius: implicitHeight / 2
+          color: Util.alpha(Color.accent, 0.14)
+          Text {
+            id: providerText
+            anchors.centerIn: parent
+            text: providerLabel
+            color: Color.accent
+            font.family: Style.font.family
+            font.pixelSize: Style.font.caption
+            font.bold: true
+          }
+        }
+
+        Text {
+          width: parent.width
+          text: address
+          color: Color.foreground
+          font.family: Style.font.family
+          font.pixelSize: Style.font.body
+          font.bold: true
+          elide: Text.ElideMiddle
+        }
+
+        Row {
+          spacing: Style.space(4)
+          Button { text: "Copy"; iconText: ""; focusable: true; onClicked: root.service.copyText(address) }
+          Button { text: "Open"; iconText: ""; focusable: true; enabled: inboxUrl !== ""; onClicked: root.service.openUrl(inboxUrl) }
+          Button {
+            text: "Forget"
+            focusable: true
+            foreground: Color.urgent
+            onClicked: root.requestConfirmation(
+              "Forget " + address + "? The public inbox may continue to exist.",
+              function() { root.service.forgetTemporary(address) },
+              "Forget")
+          }
+        }
       }
-    }
-    Button {
-      visible: root.address !== ""
-      text: "Forget"
-      iconText: "󰆴"
-      focusable: true
-      foreground: Color.urgent
-      onClicked: root.requestConfirmation(
-        "Forget this temporary address? The provider-hosted inbox may continue to exist.",
-        function() { root.service.forgetTemporary() },
-        "Forget")
     }
   }
 }

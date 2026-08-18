@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.ajanraj.disposable-email",
   "name": "Disposable Email",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Ajan Raj",
   "license": "MIT",
   "description": "Create temporary addresses and forwarding aliases from the Omarchy bar.",

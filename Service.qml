@@ -12,6 +12,7 @@ Item {
 
   property var shell: null
   property var manifest: null
+  property string omarchyPath: Quickshell.env("OMARCHY_PATH")
 
   readonly property string lastTab: stateStore.state ? stateStore.state.lastTab : "temporary"
   readonly property string temporaryProvider: stateStore.state ? stateStore.state.temporaryProvider : "maildrop"
@@ -54,6 +55,121 @@ Item {
 
   property var _credentialTasks: []
   property var _credentialCurrent: null
+  property var _quickCreate: null
+
+  function _providerLabel(provider) {
+    if (provider === "maildrop") return "Maildrop"
+    if (provider === "harakiri") return "Harakiri Mail"
+    if (provider === "duckduckgo") return "DuckDuckGo"
+    return "SimpleLogin"
+  }
+
+  function _notify(headline, description, openPanel) {
+    if (openPanel === true) {
+      Quickshell.execDetached([
+        omarchyPath + "/bin/omarchy-notification-send",
+        "--exec", "omarchy-shell shell summon io.github.ajanraj.disposable-email",
+        headline, description
+      ])
+    } else if (description) {
+      Quickshell.execDetached([
+        omarchyPath + "/bin/omarchy-notification-send", headline, description
+      ])
+    } else {
+      Quickshell.execDetached([
+        omarchyPath + "/bin/omarchy-notification-send", headline
+      ])
+    }
+  }
+
+  function _quickBusy() {
+    _notify("Disposable Email is busy", "Wait for the current action, then try again", false)
+    return "busy"
+  }
+
+  function _beginQuick(provider, action, noun) {
+    _quickCreate = {
+      provider: provider,
+      action: action,
+      noun: noun,
+      phase: "creating"
+    }
+  }
+
+  function _quickMatches(provider, action) {
+    var quick = _quickCreate
+    return quick && quick.phase === "creating" && quick.provider === provider
+      && (!action || quick.action === action)
+  }
+
+  function _finishQuickFailure(headline, description, openPanel) {
+    if (!_quickCreate) return
+    _quickCreate = null
+    _notify(headline, description, openPanel)
+  }
+
+  function _quickCredentialFailed(provider, action) {
+    if (!_quickMatches(provider, action)) return
+    setLastTab(provider)
+    _finishQuickFailure(_providerLabel(provider) + " credential unavailable",
+      "Open Disposable Email to add or replace the saved credential", true)
+  }
+
+  function _quickUnauthorized(provider) {
+    if (!_quickMatches(provider, "")) return
+    setLastTab(provider)
+    _finishQuickFailure(_providerLabel(provider) + " rejected the saved credential",
+      "Open Disposable Email to replace or disconnect it", true)
+  }
+
+  function _quickProviderFailed(provider, action) {
+    if (!_quickMatches(provider, action)) return
+    var label = _providerLabel(provider)
+    var noun = _quickCreate.noun
+    _finishQuickFailure(label + " could not create an " + noun,
+      "Check your connection and try again", true)
+  }
+
+  function _copyQuick(value) {
+    if (!_quickCreate) {
+      copyText(value)
+      return
+    }
+    var quick = _quickCreate
+    quick.phase = "copying"
+    _quickCreate = quick
+    _queueCopy(value, true)
+  }
+
+  function quickTemporary(provider) {
+    if (actionBusy || _quickCreate !== null) return _quickBusy()
+    var selected = String(provider || "")
+    if (selected === "") selected = temporaryProvider
+    if (selected !== "maildrop" && selected !== "harakiri") {
+      _notify("Invalid temporary email provider", "Use maildrop or harakiri", false)
+      return "invalid-provider"
+    }
+    _beginQuick(selected, "temporary", "address")
+    if (!temporaryAdapter.create(selected)) {
+      _quickProviderFailed(selected, "temporary")
+      return "error"
+    }
+    return "started"
+  }
+
+  function quickDuckDuckGo() {
+    if (actionBusy || _quickCreate !== null) return _quickBusy()
+    _beginQuick("duckduckgo", "duck-generate", "alias")
+    generateDuck()
+    return "started"
+  }
+
+  function quickSimpleLogin() {
+    if (actionBusy || _quickCreate !== null) return _quickBusy()
+    _beginQuick("simplelogin", "simple-random", "alias")
+    createSimpleRandom()
+    return "started"
+  }
 
   function _pendingDuckOperation() {
     var task = _credentialCurrent
@@ -113,17 +229,54 @@ Item {
   function copyText(value) {
     var text = String(value || "")
     if (text === "") return
-    if (copyProcess.running) {
-      _pendingClipboardText = text
-      return
-    }
-    _startCopy(text)
+    _queueCopy(text, false)
   }
 
-  function _startCopy(text) {
+  function _queueCopy(text, quick) {
+    if (copyProcess.running || _clipboardScheduled) {
+      var next = _clipboardQueue.slice()
+      next.push({ text: text, quick: quick === true })
+      _clipboardQueue = next
+      return
+    }
+    _startCopy(text, quick === true)
+  }
+
+  function _startCopy(text, quick) {
     _activeClipboardText = text
+    _activeClipboardQuick = quick === true
+    _clipboardHandled = false
     copyProcess.stdinEnabled = true
     copyProcess.running = true
+  }
+
+  function _finishClipboard(exitCode) {
+    if (_clipboardHandled) return
+    _clipboardHandled = true
+    var wasQuick = _activeClipboardQuick
+    _activeClipboardQuick = false
+    _activeClipboardText = ""
+
+    if (wasQuick && _quickCreate) {
+      if (exitCode === 0) {
+        var quick = _quickCreate
+        _quickCreate = null
+        _notify(_providerLabel(quick.provider) + " " + quick.noun + " copied", "", false)
+      } else {
+        _finishQuickFailure("Could not copy to the clipboard",
+          "Check that wl-clipboard is available, then try again", true)
+      }
+    }
+
+    if (_clipboardQueue.length === 0) return
+    _clipboardScheduled = true
+    Qt.callLater(function() {
+      var next = root._clipboardQueue.slice()
+      var item = next.shift()
+      root._clipboardQueue = next
+      root._clipboardScheduled = false
+      root._startCopy(item.text, item.quick)
+    })
   }
 
   function openUrl(value) {
@@ -329,6 +482,7 @@ Item {
         if (simpleAliases.length > 0) simpleStale = true
       }
     }
+    _quickCredentialFailed(provider, task.action)
     _completeCredentialTask()
   }
 
@@ -389,8 +543,10 @@ Item {
 
   function _credentialOperationRejected(provider, operation, message) {
     if (_credentialCurrent === null) return
+    var task = _credentialCurrent
     if (provider === "duckduckgo") _duckError = message
     else if (provider === "simplelogin") _simpleError = message
+    if (task && task.kind === "lookup") _quickCredentialFailed(provider, task.action)
     _completeCredentialTask()
   }
 
@@ -415,6 +571,7 @@ Item {
       _duckError = "DuckDuckGo rejected the saved token. Replace it or disconnect."
     }
     else _simpleError = "SimpleLogin rejected the saved API key. Replace it or disconnect."
+    _quickUnauthorized(provider)
   }
 
   function _updateSimpleAlias(patch) {
@@ -435,7 +592,10 @@ Item {
   }
 
   property string _activeClipboardText: ""
-  property string _pendingClipboardText: ""
+  property bool _activeClipboardQuick: false
+  property bool _clipboardHandled: true
+  property bool _clipboardScheduled: false
+  property var _clipboardQueue: []
 
   Process {
     id: copyProcess
@@ -451,10 +611,15 @@ Item {
     }
 
     onExited: function(exitCode, exitStatus) {
-      if (root._pendingClipboardText === "") return
-      var value = root._pendingClipboardText
-      root._pendingClipboardText = ""
-      Qt.callLater(function() { root._startCopy(value) })
+      root._finishClipboard(exitCode)
+    }
+
+    onRunningChanged: {
+      if (running || root._activeClipboardText === "" || root._clipboardHandled) return
+      Qt.callLater(function() {
+        if (!copyProcess.running && root._activeClipboardText !== ""
+            && !root._clipboardHandled) root._finishClipboard(-1)
+      })
     }
   }
 
@@ -481,7 +646,16 @@ Item {
 
     onCreated: function(result) {
       root._saveState(StateModel.addTemporaryAddress(stateStore.state, result))
-      root.copyText(result.address)
+      if (root._quickMatches(root._quickCreate ? root._quickCreate.provider : "", "temporary"))
+        root._copyQuick(result.address)
+      else
+        root.copyText(result.address)
+    }
+    onErrorChanged: {
+      if (temporaryAdapter.error !== "") Qt.callLater(function() {
+        if (root._quickCreate)
+          root._quickProviderFailed(root._quickCreate.provider, "temporary")
+      })
     }
   }
 
@@ -495,7 +669,8 @@ Item {
         address: result.address,
         active: true
       }))
-      root.copyText(result.address)
+      if (root._quickMatches("duckduckgo", "duck-generate")) root._copyQuick(result.address)
+      else root.copyText(result.address)
     }
     onStatusFetched: function(result) {
       root._duckError = ""
@@ -509,7 +684,10 @@ Item {
     }
     onUnauthorized: root._markUnauthorized("duckduckgo")
     onErrorChanged: {
-      if (duckAdapter.error !== "") root.duckRemoteAvailable = false
+      if (duckAdapter.error !== "") {
+        root.duckRemoteAvailable = false
+        Qt.callLater(function() { root._quickProviderFailed("duckduckgo", "duck-generate") })
+      }
     }
   }
 
@@ -518,7 +696,8 @@ Item {
 
     onRandomCreated: function(alias) {
       root._simpleError = ""
-      root.copyText(alias.email)
+      if (root._quickMatches("simplelogin", "simple-random")) root._copyQuick(alias.email)
+      else root.copyText(alias.email)
       root.refreshSimpleLogin(root._simpleQuery, root._simpleFilter, root._simplePage)
     }
     onCustomOptionsLoaded: function(options) {
@@ -550,10 +729,31 @@ Item {
     onPlanLimit: function(message) {
       root.simpleCanCreate = false
       root._simpleError = message
+      if (root._quickMatches("simplelogin", "simple-random"))
+        root._finishQuickFailure("SimpleLogin cannot create another alias",
+          "Check your plan or delete an alias, then try again", true)
     }
     onErrorChanged: {
       if (simpleAdapter.error !== "" && root.simpleAliases.length > 0)
         root.simpleStale = true
+      if (simpleAdapter.error !== "")
+        Qt.callLater(function() { root._quickProviderFailed("simplelogin", "simple-random") })
+    }
+  }
+
+  IpcHandler {
+    target: "io.github.ajanraj.disposable-email"
+
+    function temporary(provider: string): string {
+      return root.quickTemporary(provider)
+    }
+
+    function duckduckgo(): string {
+      return root.quickDuckDuckGo()
+    }
+
+    function simplelogin(): string {
+      return root.quickSimpleLogin()
     }
   }
 

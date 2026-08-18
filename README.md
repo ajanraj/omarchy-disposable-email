@@ -87,6 +87,37 @@ before creating a custom alias. Credentials must be checked against the
 provider by the user; this README does not assert that any supplied key is
 currently valid.
 
+## Keyboard shortcuts
+
+The plugin exposes IPC commands for user-defined shortcuts. It does not mutate
+your Hyprland configuration. Add bindings such as these to your personal
+bindings file after checking for conflicts:
+
+```bash
+omarchy-shell io.github.ajanraj.disposable-email temporary ''
+omarchy-shell io.github.ajanraj.disposable-email temporary maildrop
+omarchy-shell io.github.ajanraj.disposable-email temporary harakiri
+omarchy-shell io.github.ajanraj.disposable-email duckduckgo
+omarchy-shell io.github.ajanraj.disposable-email simplelogin
+```
+
+```lua
+o.bind("SUPER + SHIFT + ALT + T", "Disposable Email temporary", "omarchy-shell io.github.ajanraj.disposable-email temporary ''")
+o.bind("SUPER + SHIFT + ALT + D", "Disposable Email DuckDuckGo", "omarchy-shell io.github.ajanraj.disposable-email duckduckgo")
+o.bind("SUPER + SHIFT + ALT + S", "Disposable Email SimpleLogin", "omarchy-shell io.github.ajanraj.disposable-email simplelogin")
+```
+
+Inspect current bindings before assigning keys:
+
+```bash
+omarchy menu keybindings --print
+```
+
+The `T` command uses the saved temporary provider. `D` and `S` require
+connected credentials. SimpleLogin creates a random alias. On success, the
+new address is copied and a toast is sent; the address itself is not shown in
+the toast.
+
 ## Data and credential boundaries
 
 Persistent UI state is stored at:
@@ -191,6 +222,7 @@ The state model is pure JavaScript and can be tested without a running shell:
 ```bash
 node tests/ui_contract.test.js
 node tests/state_model.test.js
+node tests/service_ipc_contract.test.js
 qmllint lib/CredentialStore.qml lib/StateStore.qml
 ```
 

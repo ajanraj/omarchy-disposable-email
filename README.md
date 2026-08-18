@@ -1,5 +1,7 @@
 # Omarchy Disposable Email
 
+![Omarchy Disposable Email hero](preview.png)
+
 Disposable Email adds one Omarchy bar widget with three provider workflows:
 
 1. **Temporary Address** creates a provider-hosted address with a short,

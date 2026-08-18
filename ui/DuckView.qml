@@ -99,7 +99,6 @@ ColumnLayout {
     }
 
     ScrollableHistory {
-      id: historyView
       Layout.fillWidth: true
       Layout.fillHeight: true
       Layout.minimumHeight: 0

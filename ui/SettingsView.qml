@@ -9,6 +9,8 @@ Column {
   width: parent ? parent.width : implicitWidth
   spacing: Style.space(12)
 
+  readonly property bool fullPanelHeight: false
+
   PanelSectionHeader { text: "PLUGIN SETTINGS" }
 
   Text {

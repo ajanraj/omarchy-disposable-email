@@ -15,6 +15,7 @@ ColumnLayout {
   readonly property string credentialState: service ? String(service.duckCredentialState || "") : ""
   readonly property bool connected: credentialState === "connected" || credentialState === "available" || credentialState === "ready"
   readonly property bool configured: connected || credentialState === "attention"
+  readonly property bool fullPanelHeight: root.configured
 
   PanelSectionHeader {
     Layout.fillWidth: true

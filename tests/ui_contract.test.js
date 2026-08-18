@@ -61,4 +61,26 @@ for (const view of views) {
     }
 }
 
+// Sizing contract: a loaded view declares whether it needs the bounded panel
+// height. The panel uses implicitHeight for setup/settings views and keeps the
+// full height only for views that contain a history surface.
+const panelSizingStart = panel.indexOf("contentHeight:")
+const panelSizingEnd = panel.indexOf("\n\n", panelSizingStart)
+assert.ok(panelSizingStart >= 0, "Panel.qml must declare panel content height")
+const panelSizing = panel.slice(panelSizingStart, panelSizingEnd >= 0 ? panelSizingEnd : undefined)
+assert.match(panelSizing, /viewLoader\.item/, "panel height must depend on the loaded view")
+assert.match(panelSizing, /fullPanelHeight/, "panel height must honor the loaded view sizing contract")
+assert.match(panelSizing, /implicitHeight/, "compact views must use their implicit height")
+
+const sizingContract = {
+    "TemporaryView.qml": /property\s+bool\s+fullPanelHeight\s*:\s*true/,
+    "DuckView.qml": /property\s+bool\s+fullPanelHeight\s*:\s*root\.configured/,
+    "SimpleLoginView.qml": /property\s+bool\s+fullPanelHeight\s*:\s*root\.configured/,
+    "SettingsView.qml": /property\s+bool\s+fullPanelHeight\s*:\s*false/
+}
+
+for (const [view, contract] of Object.entries(sizingContract)) {
+    assert.match(read(view), contract, `${view} must declare its panel height behavior`)
+}
+
 console.log("UI contract tests passed")

@@ -69,7 +69,14 @@ Panel {
     open: root.opened
     focusTarget: keySurface
     contentWidth: panel.fittedContentWidth(Style.space(560))
-    contentHeight: panel.cappedContentHeight(Style.space(680))
+    contentHeight: viewLoader.item && !viewLoader.item.fullPanelHeight
+      ? panel.fittedContentHeight(
+          tabs.implicitHeight
+            + shell.spacing
+            + Style.space(13)
+            + viewLoader.item.implicitHeight,
+          Style.space(680))
+      : panel.cappedContentHeight(Style.space(680))
 
     Item {
       id: keySurface

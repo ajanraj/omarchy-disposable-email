@@ -12,6 +12,7 @@ ColumnLayout {
   height: parent ? parent.height : implicitHeight
   spacing: Style.space(12)
 
+  readonly property bool fullPanelHeight: true
   readonly property var history: service ? service.temporaryAddresses : []
 
   function providerName(provider) {

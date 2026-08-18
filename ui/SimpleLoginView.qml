@@ -1,12 +1,15 @@
 import QtQuick
+import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
-Column {
+ColumnLayout {
   id: root
   required property var service
   required property var requestConfirmation
+
   width: parent ? parent.width : implicitWidth
+  height: parent ? parent.height : implicitHeight
   spacing: Style.space(12)
 
   property bool customVisible: false
@@ -49,9 +52,13 @@ Column {
     service.refreshSimpleLogin(searchField.text, filterDropdown.value, page)
   }
 
-  PanelSectionHeader { text: "SIMPLELOGIN" }
+  PanelSectionHeader {
+    Layout.fillWidth: true
+    text: "SIMPLELOGIN"
+  }
 
   StatusBanner {
+    Layout.fillWidth: true
     reserveSpace: true
     text: root.service && root.service.simpleError
       ? String(root.service.simpleError)
@@ -62,28 +69,30 @@ Column {
     warning: !error && root.service && root.service.simpleStale
   }
 
-  Column {
+  ColumnLayout {
     visible: !root.connected
-    width: parent.width
+    Layout.fillWidth: true
     spacing: Style.space(8)
 
     Text {
-      width: parent.width
+      Layout.fillWidth: true
       text: "Open setup, create an API key, then paste it below. The key is handed directly to the service and cleared from this form."
       color: Color.muted
       font.family: Style.font.family
       font.pixelSize: Style.font.bodySmall
       wrapMode: Text.WordWrap
     }
+
     Button {
       text: "Open Setup"
       iconText: ""
       focusable: true
       onClicked: root.service.openUrl("https://app.simplelogin.io/dashboard/api_key")
     }
+
     TextField {
       id: apiKeyField
-      width: parent.width
+      Layout.fillWidth: true
       placeholderText: "API key"
       password: true
       onAccepted: connect()
@@ -94,6 +103,7 @@ Column {
         clear()
       }
     }
+
     Button {
       text: "Connect SimpleLogin"
       iconText: "󰌘"
@@ -103,13 +113,17 @@ Column {
     }
   }
 
-  Column {
+  ColumnLayout {
     visible: root.configured
-    width: parent.width
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+    Layout.minimumHeight: 0
     spacing: Style.space(10)
 
     Row {
+      Layout.fillWidth: true
       spacing: Style.space(6)
+
       Button {
         readonly property bool creating: root.service.simpleOperation === "random"
         width: Style.space(132)
@@ -120,6 +134,7 @@ Column {
         enabled: root.connected && root.service.simpleCanCreate && !root.service.actionBusy
         onClicked: root.service.createSimpleRandom()
       }
+
       Button {
         readonly property bool loading: root.service.simpleOperation === "options"
         width: Style.space(132)
@@ -135,15 +150,21 @@ Column {
       }
     }
 
-    Column {
+    ColumnLayout {
       visible: root.customVisible
-      width: parent.width
+      Layout.fillWidth: true
       spacing: Style.space(8)
 
       Row {
-        width: parent.width
+        Layout.fillWidth: true
         spacing: Style.space(6)
-        TextField { id: prefixField; width: parent.width * 0.42; placeholderText: "Prefix" }
+
+        TextField {
+          id: prefixField
+          width: parent.width * 0.42
+          placeholderText: "Prefix"
+        }
+
         Dropdown {
           id: suffixDropdown
           width: parent.width - prefixField.width - parent.spacing
@@ -152,16 +173,28 @@ Column {
           options: root.service.simpleAliasOptions ? root.service.simpleAliasOptions.suffixes : []
         }
       }
+
       MultiSelect {
         id: mailboxSelect
-        width: parent.width
+        Layout.fillWidth: true
         label: "Forward to"
         values: root.selectedMailboxIds
         options: root.mailboxOptions()
         onChanged: function(values) { root.selectedMailboxIds = values }
       }
-      TextField { id: nameField; width: parent.width; placeholderText: "Name (optional)" }
-      TextField { id: noteField; width: parent.width; placeholderText: "Note (optional)" }
+
+      TextField {
+        id: nameField
+        Layout.fillWidth: true
+        placeholderText: "Name (optional)"
+      }
+
+      TextField {
+        id: noteField
+        Layout.fillWidth: true
+        placeholderText: "Note (optional)"
+      }
+
       Button {
         readonly property bool creating: root.service.simpleOperation === "custom"
         width: Style.space(178)
@@ -184,11 +217,10 @@ Column {
       }
     }
 
-    PanelSeparator {}
-
     Row {
-      width: parent.width
+      Layout.fillWidth: true
       spacing: Style.space(6)
+
       TextField {
         id: searchField
         width: parent.width - filterDropdown.width - refreshButton.width - parent.spacing * 2
@@ -196,6 +228,7 @@ Column {
         enabled: root.connected
         onAccepted: { root.page = 0; root.refresh() }
       }
+
       Dropdown {
         id: filterDropdown
         width: Style.space(118)
@@ -213,6 +246,7 @@ Column {
           root.refresh()
         }
       }
+
       Button {
         id: refreshButton
         width: Style.space(36)
@@ -226,78 +260,99 @@ Column {
       }
     }
 
-    Text {
-      visible: !root.service.simpleAliases || root.service.simpleAliases.length === 0
-      width: parent.width
-      text: "No aliases found."
-      color: Color.muted
-      font.family: Style.font.family
-      font.pixelSize: Style.font.body
-      horizontalAlignment: Text.AlignHCenter
-    }
-
-    Repeater {
+    ScrollableHistory {
+      id: historyView
+      Layout.fillWidth: true
+      Layout.fillHeight: true
+      Layout.minimumHeight: 0
+      title: "ALIASES"
+      emptyText: "No aliases found."
       model: root.service.simpleAliases || []
-      delegate: AddressHistoryCard {
-        required property var modelData
-        readonly property bool enabledAlias: modelData.enabled === true
-        readonly property bool pinnedAlias: modelData.pinned === true
-        readonly property string mailbox: root.mailboxText(modelData.mailboxes || [])
-        readonly property string counters: root.counterText(modelData)
-        readonly property bool savingPin: root.service.simpleOperation === "pinned"
-          && root.service.simpleTargetAliasId === Number(modelData.id)
-        readonly property bool updating: root.service.simpleOperation === "toggle"
-          && root.service.simpleTargetAliasId === Number(modelData.id)
-        providerLabel: "SimpleLogin"
-        address: String(modelData.email || "")
-        statusText: enabledAlias ? "Enabled" : "Disabled"
-        statusColor: enabledAlias ? Color.accent : Color.muted
-        detailText: "Mailbox: " + mailbox + (counters ? "  |  " + counters : "")
-        showForget: false
-        actions: [
-          {
-            id: "pin",
-            width: Style.space(104),
-            text: savingPin ? "Saving..." : (pinnedAlias ? "Unpin" : "Pin"),
-            icon: savingPin ? "󰦖" : "",
-            busy: savingPin,
-            enabled: root.connected && !root.service.actionBusy
-          },
-          {
-            id: "toggle",
-            width: Style.space(112),
-            text: updating ? "Updating..." : (enabledAlias ? "Disable" : "Enable"),
-            icon: updating ? "󰦖" : "",
-            busy: updating,
-            destructive: enabledAlias,
-            enabled: root.connected && !root.service.actionBusy
-          }
-        ]
-        onCopyRequested: root.service.copyText(address)
-        onActionRequested: function(actionId) {
-          if (actionId === "pin") {
-            root.service.setSimplePinned(modelData, !pinnedAlias)
-          } else if (!enabledAlias) {
-            root.service.toggleSimpleAlias(modelData)
-          } else {
-            root.requestConfirmation(
-              "Disable " + address + "? It will stop forwarding messages.",
-              function() { root.service.toggleSimpleAlias(modelData) },
-              "Disable")
+      delegateComponent: Component {
+        AddressHistoryCard {
+          required property var modelData
+          width: ListView.view ? ListView.view.width : implicitWidth
+          readonly property bool enabledAlias: modelData.enabled === true
+          readonly property bool pinnedAlias: modelData.pinned === true
+          readonly property string mailbox: root.mailboxText(modelData.mailboxes || [])
+          readonly property string counters: root.counterText(modelData)
+          readonly property bool savingPin: root.service.simpleOperation === "pinned"
+            && root.service.simpleTargetAliasId === Number(modelData.id)
+          readonly property bool updating: root.service.simpleOperation === "toggle"
+            && root.service.simpleTargetAliasId === Number(modelData.id)
+          providerLabel: "SimpleLogin"
+          address: String(modelData.email || "")
+          statusText: enabledAlias ? "Enabled" : "Disabled"
+          statusColor: enabledAlias ? Color.accent : Color.muted
+          detailText: "Mailbox: " + mailbox + (counters ? "  |  " + counters : "")
+          showForget: false
+          actions: [
+            {
+              id: "pin",
+              width: Style.space(104),
+              text: savingPin ? "Saving..." : (pinnedAlias ? "Unpin" : "Pin"),
+              icon: savingPin ? "󰦖" : "",
+              busy: savingPin,
+              enabled: root.connected && !root.service.actionBusy
+            },
+            {
+              id: "toggle",
+              width: Style.space(112),
+              text: updating ? "Updating..." : (enabledAlias ? "Disable" : "Enable"),
+              icon: updating ? "󰦖" : "",
+              busy: updating,
+              destructive: enabledAlias,
+              enabled: root.connected && !root.service.actionBusy
+            }
+          ]
+          onCopyRequested: root.service.copyText(address)
+          onActionRequested: function(actionId) {
+            if (actionId === "pin") {
+              root.service.setSimplePinned(modelData, !pinnedAlias)
+            } else if (!enabledAlias) {
+              root.service.toggleSimpleAlias(modelData)
+            } else {
+              root.requestConfirmation(
+                "Disable " + address + "? It will stop forwarding messages.",
+                function() { root.service.toggleSimpleAlias(modelData) },
+                "Disable")
+            }
           }
         }
       }
     }
 
     Row {
-      anchors.horizontalCenter: parent.horizontalCenter
+      Layout.alignment: Qt.AlignHCenter
       spacing: Style.space(8)
-      Button { text: "Previous"; focusable: true; enabled: root.connected && root.page > 0 && !root.service.actionBusy; onClicked: { root.page--; root.refresh() } }
-      Text { text: "Page " + (root.page + 1); color: Color.muted; font.family: Style.font.family; font.pixelSize: Style.font.body; anchors.verticalCenter: parent.verticalCenter }
-      Button { text: "Next"; focusable: true; enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.actionBusy; onClicked: { root.page++; root.refresh() } }
+
+      Button {
+        text: "Previous"
+        focusable: true
+        enabled: root.connected && root.page > 0 && !root.service.actionBusy
+        onClicked: { root.page--; root.refresh() }
+      }
+
+      Text {
+        text: "Page " + (root.page + 1)
+        color: Color.muted
+        font.family: Style.font.family
+        font.pixelSize: Style.font.body
+        anchors.verticalCenter: parent.verticalCenter
+      }
+
+      Button {
+        text: "Next"
+        focusable: true
+        enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.actionBusy
+        onClicked: { root.page++; root.refresh() }
+      }
     }
 
-    PanelSeparator {}
+    PanelSeparator {
+      Layout.fillWidth: true
+    }
+
     Button {
       text: "Disconnect SimpleLogin"
       iconText: "󰌙"

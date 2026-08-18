@@ -1,12 +1,15 @@
 import QtQuick
+import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
-Column {
+ColumnLayout {
   id: root
   required property var service
   required property var requestConfirmation
+
   width: parent ? parent.width : implicitWidth
+  height: parent ? parent.height : implicitHeight
   spacing: Style.space(12)
 
   readonly property var history: service ? service.temporaryAddresses : []
@@ -15,9 +18,13 @@ Column {
     return provider === "harakiri" ? "Harakiri" : "Maildrop"
   }
 
-  PanelSectionHeader { text: "TEMPORARY ADDRESS" }
+  PanelSectionHeader {
+    Layout.fillWidth: true
+    text: "TEMPORARY ADDRESS"
+  }
 
   StatusBanner {
+    Layout.fillWidth: true
     reserveSpace: true
     text: root.service && root.service.temporaryError
       ? String(root.service.temporaryError)
@@ -27,8 +34,9 @@ Column {
   }
 
   Row {
-    width: parent.width
+    Layout.fillWidth: true
     spacing: Style.space(6)
+
     Dropdown {
       width: parent.width - createButton.width - parent.spacing
       showLabel: false
@@ -39,6 +47,7 @@ Column {
       ]
       onChanged: function(value) { root.service.setTemporaryProvider(value) }
     }
+
     Button {
       id: createButton
       width: Style.space(116)
@@ -51,32 +60,28 @@ Column {
     }
   }
 
-  PanelSeparator {}
-  PanelSectionHeader { text: "HISTORY" }
-
-  Text {
-    visible: !root.history || root.history.length === 0
-    width: parent.width
-    text: "Create an address to start your history."
-    color: Color.muted
-    font.family: Style.font.family
-    font.pixelSize: Style.font.body
-    horizontalAlignment: Text.AlignHCenter
-  }
-
-  Repeater {
+  ScrollableHistory {
+    id: historyView
+    Layout.fillWidth: true
+    Layout.fillHeight: true
+    Layout.minimumHeight: 0
+    title: "HISTORY"
+    emptyText: "Create an address to start your history."
     model: root.history || []
-    delegate: AddressHistoryCard {
-      required property var modelData
-      providerLabel: root.providerName(String(modelData.provider || ""))
-      address: String(modelData.address || "")
-      showOpen: true
-      onCopyRequested: root.service.copyText(address)
-      onOpenRequested: root.service.openUrl(String(modelData.inboxUrl || ""))
-      onForgetRequested: root.requestConfirmation(
-        "Forget " + address + "? The public inbox may continue to exist.",
-        function() { root.service.forgetTemporary(address) },
-        "Forget")
+    delegateComponent: Component {
+      AddressHistoryCard {
+        required property var modelData
+        width: ListView.view ? ListView.view.width : implicitWidth
+        providerLabel: root.providerName(String(modelData.provider || ""))
+        address: String(modelData.address || "")
+        showOpen: true
+        onCopyRequested: root.service.copyText(address)
+        onOpenRequested: root.service.openUrl(String(modelData.inboxUrl || ""))
+        onForgetRequested: root.requestConfirmation(
+          "Forget " + address + "? The public inbox may continue to exist.",
+          function() { root.service.forgetTemporary(address) },
+          "Forget")
+      }
     }
   }
 }

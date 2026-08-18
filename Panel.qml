@@ -1,5 +1,4 @@
 import QtQuick
-import QtQuick.Controls as QQC
 import qs.Commons
 import qs.Ui
 import "ui"
@@ -149,33 +148,15 @@ Panel {
             wrapMode: Text.WordWrap
           }
 
-          Flickable {
-            id: scroll
+          Loader {
+            id: viewLoader
             anchors.fill: parent
             visible: !!root.service
-            contentWidth: width
-            contentHeight: contentColumn.implicitHeight
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
-            flickableDirection: Flickable.VerticalFlick
-            interactive: contentHeight > height
-            QQC.ScrollBar.vertical: QQC.ScrollBar { policy: QQC.ScrollBar.AsNeeded }
-
-            Column {
-              id: contentColumn
-              width: scroll.width
-              spacing: Style.space(16)
-
-              Loader {
-                id: viewLoader
-                width: parent.width
-                sourceComponent: !root.service ? null
-                  : root.settingsVisible ? settingsView
-                  : root.activeTab === 0 ? temporaryView
-                  : root.activeTab === 1 ? duckView
-                  : simpleView
-              }
-            }
+            sourceComponent: !root.service ? null
+              : root.settingsVisible ? settingsView
+              : root.activeTab === 0 ? temporaryView
+              : root.activeTab === 1 ? duckView
+              : simpleView
           }
         }
       }

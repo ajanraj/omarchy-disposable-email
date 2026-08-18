@@ -6,7 +6,7 @@ import "lib/StateModel.js" as StateModel
 import "providers"
 
 // One state owner is shared by every per-monitor bar widget. It performs
-// network work only in response to an explicit panel action.
+// network work only in response to an explicit panel or IPC action.
 Item {
   id: root
 
@@ -235,7 +235,13 @@ Item {
   function _queueCopy(text, quick) {
     if (copyProcess.running || _clipboardScheduled) {
       var next = _clipboardQueue.slice()
-      next.push({ text: text, quick: quick === true })
+      var item = { text: text, quick: quick === true }
+      // Preserve a pending shortcut result, but coalesce rapid manual copies
+      // so the most recently selected address wins as it did before IPC.
+      if (!item.quick && next.length > 0 && next[next.length - 1].quick !== true)
+        next[next.length - 1] = item
+      else
+        next.push(item)
       _clipboardQueue = next
       return
     }

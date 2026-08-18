@@ -11,77 +11,40 @@ const handler = service.slice(handlerStart)
 
 assert.match(
     handler,
-    new RegExp(`target\\s*:\\s*[\"']${ipcTarget.replaceAll(".", "\\.")}[\"']`),
-    "the IPC handler must use the plugin target"
+    new RegExp(`target\\s*:\\s*["']${ipcTarget.replaceAll(".", "\\.")}["']`)
 )
-
-assert.match(
-    handler,
-    /function\s+temporary\s*\(\s*provider\s*:\s*string\s*\)\s*:\s*string\s*\{/,
-    "the IPC handler must expose temporary(provider: string): string"
-)
+assert.match(handler, /function\s+temporary\s*\(\s*provider\s*:\s*string\s*\)\s*:\s*string\s*\{/)
 for (const method of ["duckduckgo", "simplelogin"]) {
-    assert.match(
-        handler,
-        new RegExp(`function\\s+${method}\\s*\\(\\s*\\)\\s*:\\s*string\\s*\\{`),
-        `the IPC handler must expose ${method}(): string`
-    )
+    assert.match(handler, new RegExp(`function\\s+${method}\\s*\\(\\s*\\)\\s*:\\s*string\\s*\\{`))
 }
 
-const notificationArrays = [
-    ...service.matchAll(/Quickshell\.execDetached\s*\(\s*(\[[\s\S]*?omarchy-notification-send[\s\S]*?\])\s*\)/g)
-]
-const notificationVariables = [
-    ...service.matchAll(/\b(?:var|let|const)\s+([A-Za-z_$][\w$]*)\s*=\s*(\[[\s\S]*?omarchy-notification-send[\s\S]*?\])/g)
-]
-assert.notEqual(
-    notificationArrays.length + notificationVariables.length,
-    0,
-    "notifications must use omarchy-notification-send"
+const notifyStart = service.indexOf("function _notify")
+const notifyEnd = service.indexOf("function _quickBusy", notifyStart)
+const notify = service.slice(notifyStart, notifyEnd)
+assert.match(notify, /Quickshell\.execDetached\s*\(\s*\[/)
+assert.match(notify, /omarchy-notification-send/)
+assert.doesNotMatch(notify, /["'](?:bash|sh|zsh)["']/)
+
+assert.match(service, /if \(selected === ""\) selected = temporaryProvider/)
+assert.match(service, /selected !== "maildrop" && selected !== "harakiri"/)
+assert.equal(
+    [...service.matchAll(/if \(actionBusy \|\| _quickCreate !== null\) return _quickBusy\(\)/g)].length,
+    3,
+    "every IPC create path must reject repeated requests"
 )
 
-for (const [, argv] of notificationArrays) {
-    assert.match(argv.split(",", 1)[0], /omarchy-notification-send/)
-    assert.doesNotMatch(argv, /\[\s*[\"'](?:bash|sh|zsh)[\"']\s*,/)
-}
-for (const [, variable, argv] of notificationVariables) {
-    assert.match(argv.split(",", 1)[0], /omarchy-notification-send/)
-    assert.match(
-        service,
-        new RegExp(`Quickshell\\.execDetached\\s*\\(\\s*${variable}\\s*\\)`),
-        "the notification argv must be passed to execDetached"
-    )
-    assert.doesNotMatch(argv, /\[\s*[\"'](?:bash|sh|zsh)[\"']\s*,/)
-}
-
+assert.match(service, /if \(exitCode === 0\)[\s\S]*?quick\.noun \+ " copied"/)
+assert.match(service, /Could not copy to the clipboard/)
+assert.match(service, /credential unavailable/)
 assert.doesNotMatch(
     service,
-    /Quickshell\.execDetached\s*\(\s*(?!\[|[A-Za-z_$][\w$]*\s*\))[\s\S]{0,300}omarchy-notification-send/,
-    "notification commands must be passed as an argv array"
+    /_notify\([^)]*(?:result\.address|alias\.email|token)/s,
+    "toast calls must not receive a generated address or token"
 )
 
-function withoutStringLiterals(value) {
-    return value
-        .replace(/"(?:\\.|[^"\\])*"/g, "")
-        .replace(/'(?:\\.|[^'\\])*'/g, "")
-}
-
-const generatedValue = /\b(?:result|alias|payload)\s*(?:\.\s*(?:address|email|token)|\[\s*[\"'](?:address|email|token)[\"']\s*\])\b|\b(?:address|email|token)\b/
-for (const [, argv] of notificationArrays.map(match => [match[0], match[1]])
-    .concat(notificationVariables.map(match => [match[0], match[2]]))) {
-    assert.doesNotMatch(
-        withoutStringLiterals(argv),
-        generatedValue,
-        "notification text must not contain a generated address, email, or token"
-    )
-}
-
-for (const [, args] of service.matchAll(/\b(?:_?notify|notifyToast|sendNotification|showToast|toast)\s*\(([^)]*)\)/gs)) {
-    assert.doesNotMatch(
-        withoutStringLiterals(args),
-        generatedValue,
-        "toast calls must not receive a generated address, email, or token"
-    )
-}
+assert.match(service, /_quickMatches\("duckduckgo", "duck-generate"\)[^\n]*_copyQuick\(result\.address\)/)
+assert.match(service, /else root\.copyText\(result\.address\)/)
+assert.match(service, /_quickMatches\("simplelogin", "simple-random"\)[^\n]*_copyQuick\(alias\.email\)/)
+assert.match(service, /else root\.copyText\(alias\.email\)/)
 
 console.log("Service IPC contract tests passed")

@@ -87,6 +87,13 @@ Item {
     return "busy"
   }
 
+  function _quickNotConfigured(provider) {
+    setLastTab(provider)
+    _notify(_providerLabel(provider) + " is not connected",
+      "Open Disposable Email to connect this provider", true)
+    return "not-configured"
+  }
+
   function _beginQuick(provider, action, noun) {
     _quickCreate = {
       provider: provider,
@@ -158,6 +165,7 @@ Item {
   }
 
   function quickDuckDuckGo() {
+    if (duckCredentialState !== "connected") return _quickNotConfigured("duckduckgo")
     if (actionBusy || _quickCreate !== null) return _quickBusy()
     _beginQuick("duckduckgo", "duck-generate", "alias")
     generateDuck()
@@ -165,6 +173,7 @@ Item {
   }
 
   function quickSimpleLogin() {
+    if (simpleCredentialState !== "connected") return _quickNotConfigured("simplelogin")
     if (actionBusy || _quickCreate !== null) return _quickBusy()
     _beginQuick("simplelogin", "simple-random", "alias")
     createSimpleRandom()

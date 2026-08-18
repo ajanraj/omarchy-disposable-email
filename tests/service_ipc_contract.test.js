@@ -32,6 +32,8 @@ assert.equal(
     3,
     "every IPC create path must reject repeated requests"
 )
+assert.match(service, /if \(duckCredentialState !== "connected"\) return _quickNotConfigured\("duckduckgo"\)/)
+assert.match(service, /if \(simpleCredentialState !== "connected"\) return _quickNotConfigured\("simplelogin"\)/)
 
 assert.match(service, /if \(exitCode === 0\)[\s\S]*?quick\.noun \+ " copied"/)
 assert.match(service, /Could not copy to the clipboard/)

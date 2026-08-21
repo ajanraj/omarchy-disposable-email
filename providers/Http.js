@@ -23,6 +23,8 @@ function buildConfig(method, url, authenticationHeader, body) {
         "request = \"" + quoteConfig(method) + "\"",
         "url = \"" + quoteConfig(url) + "\"",
         "header = \"Accept: application/json\"",
+        // DuckDuckGo's bot protection rejects requests without a browser-like User-Agent
+        "header = \"User-Agent: Mozilla/5.0\"",
         "header = \"" + quoteConfig(authenticationHeader) + "\"",
         "write-out = \"" + quoteConfig(STATUS_MARKER + "%{http_code}") + "\""
     ]

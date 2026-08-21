@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1 - 2026-08-21
+
+### Fixed
+
+- Send a User-Agent header so DuckDuckGo alias generation is not rejected by bot protection (HTTP 403).
+
 ## 0.2.0 - 2026-08-18
 
 ### Added

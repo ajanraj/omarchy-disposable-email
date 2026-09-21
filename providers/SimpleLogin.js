@@ -13,9 +13,26 @@ function validId(id) {
     return typeof id === "number" && isFinite(id) && Math.floor(id) === id && id > 0
 }
 
+// Field-shape rules of the SimpleLogin response contract, shared by the
+// normalizers below so each rule is named once.
+function isRecord(value) {
+    return Boolean(value) && typeof value === "object"
+}
+
+function isString(value) {
+    return typeof value === "string"
+}
+
+function isNonEmptyString(value) {
+    return isString(value) && value.length > 0
+}
+
+function hasValidId(record) {
+    return validId(Number(record.id))
+}
+
 function normalizeMailbox(mailbox) {
-    if (!mailbox || typeof mailbox !== "object" || !validId(Number(mailbox.id))
-            || typeof mailbox.email !== "string" || mailbox.email.length === 0)
+    if (!isRecord(mailbox) || !hasValidId(mailbox) || !isNonEmptyString(mailbox.email))
         return null
     return {
         id: Number(mailbox.id),
@@ -25,8 +42,7 @@ function normalizeMailbox(mailbox) {
 }
 
 function normalizeSuffix(suffix) {
-    if (!suffix || typeof suffix !== "object" || typeof suffix.signed_suffix !== "string"
-            || suffix.signed_suffix.length === 0 || typeof suffix.suffix !== "string")
+    if (!isRecord(suffix) || !isNonEmptyString(suffix.signed_suffix) || !isString(suffix.suffix))
         return null
     return {
         value: suffix.signed_suffix,
@@ -37,8 +53,7 @@ function normalizeSuffix(suffix) {
 }
 
 function normalizeAlias(alias) {
-    if (!alias || typeof alias !== "object" || !validId(Number(alias.id))
-            || typeof alias.email !== "string" || alias.email.length === 0)
+    if (!isRecord(alias) || !hasValidId(alias) || !isNonEmptyString(alias.email))
         return null
 
     var sourceMailboxes = Array.isArray(alias.mailboxes) ? alias.mailboxes

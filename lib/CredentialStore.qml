@@ -117,7 +117,7 @@ QtObject {
         if (exitCode !== 0) {
             // Clearing a missing item is already the desired end state.
             if (operation === "clear" && exitCode === 1 && stderrClean.length === 0) {
-                clearSucceeded(provider)
+                clearSucceeded(provider, true)
                 _clearCurrent()
                 return
             }

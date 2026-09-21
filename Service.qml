@@ -598,8 +598,7 @@ Item {
         next.push(existing)
         continue
       }
-      var updated = {}
-      for (var key in existing) updated[key] = existing[key]
+      var updated = StateModel.copy(existing)
       for (var patchKey in patch) updated[patchKey] = patch[patchKey]
       next.push(updated)
     }

@@ -10,7 +10,9 @@ import Quickshell.Io
 // `finished` reports a process that ran and exited; `startFailed` reports a
 // process that never began running. A failed start is detected by a deferred
 // re-check one turn after running flips false, so an ordinary exit is claimed
-// by onExited first and callers see exactly one outcome per start().
+// by onExited first; the re-check is bound to that run by a generation marker
+// and skipped once onStarted fired, so callers see exactly one correct
+// outcome per start() regardless of signal ordering.
 QtObject {
     id: root
 
@@ -22,16 +24,20 @@ QtObject {
 
     property bool _inFlight: false
     property bool _handled: false
+    property bool _started: false
+    property int _generation: 0
 
     signal finished(string stdoutText, string stderrText, int exitCode)
     signal startFailed()
 
-    // Returns false when a command is already in flight.
+    // Returns false when a command is already in flight or unset.
     function start() {
-        if (root.busy)
+        if (root.busy || !root.command || root.command.length === 0)
             return false
+        root._generation += 1
         root._inFlight = true
         root._handled = false
+        root._started = false
         root._process.command = root.command
         root._process.stdinEnabled = root.stdinData !== ""
         root._process.running = true
@@ -69,6 +75,7 @@ QtObject {
         }
 
         onStarted: {
+            root._started = true
             var data = root.stdinData
             root.stdinData = ""
             if (data === "")
@@ -90,9 +97,14 @@ QtObject {
                 return
             // Process emits onExited for normal completion. Defer this check
             // one turn so a failed-to-start process still gets a result while
-            // an ordinary exit is handled by onExited first.
+            // an ordinary exit is handled by onExited first. The generation
+            // and started markers bind the re-check to this run: a stale
+            // callback cannot act on a later start(), and a process that did
+            // launch is never misreported as a start failure.
+            var generation = root._generation
             Qt.callLater(function() {
-                if (!root._process.running)
+                if (generation === root._generation && !root._started
+                        && !root._process.running)
                     root._failStart()
             })
         }

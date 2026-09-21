@@ -24,22 +24,20 @@ Item {
 
   property string duckCredentialState: "loading"
   readonly property bool duckBusy: duckAdapter.busy
-  readonly property string duckOperation: duckAdapter.operation !== ""
-    ? duckAdapter.operation : _pendingOperation("duckduckgo")
-  readonly property string duckTargetAddress: duckAdapter.targetAddress !== ""
-    ? duckAdapter.targetAddress : _pendingDuckTarget()
   property bool duckRemoteAvailable: true
   property string _duckError: ""
-  readonly property string duckError: _duckError !== "" ? _duckError : duckAdapter.error
+  readonly property var _duckStatus: _providerStatus("duckduckgo")
+  readonly property string duckOperation: _duckStatus.operation
+  readonly property string duckTargetAddress: _duckStatus.targetAddress
+  readonly property string duckError: _duckStatus.error
 
   property string simpleCredentialState: "loading"
   readonly property bool simpleBusy: simpleAdapter.busy
-  readonly property string simpleOperation: simpleAdapter.operation !== ""
-    ? simpleAdapter.operation : _pendingOperation("simplelogin")
-  readonly property int simpleTargetAliasId: simpleAdapter.operation !== ""
-    ? simpleAdapter.targetAliasId : _pendingSimpleTarget()
   property string _simpleError: ""
-  readonly property string simpleError: _simpleError !== "" ? _simpleError : simpleAdapter.error
+  readonly property var _simpleStatus: _providerStatus("simplelogin")
+  readonly property string simpleOperation: _simpleStatus.operation
+  readonly property int simpleTargetAliasId: _simpleStatus.targetAliasId
+  readonly property string simpleError: _simpleStatus.error
   property bool simpleStale: false
   property string simpleLastRefresh: ""
   property var simpleAliases: []
@@ -226,23 +224,29 @@ Item {
     return "started"
   }
 
-  function _pendingOperation(provider) {
+  // The status shown for a provider's in-flight work: the live adapter
+  // fields while a request runs, or the action still queued behind its
+  // credential lookup while the adapter is idle.
+  function _providerStatus(provider) {
     var task = _credentialCurrent
-    if (!task || task.provider !== provider) return ""
-    var entry = _providerActions[task.action]
-    return entry ? entry.label : ""
-  }
-
-  function _pendingDuckTarget() {
-    var task = _credentialCurrent
-    return task && task.provider === "duckduckgo" && task.payload
-      ? String(task.payload.address || "") : ""
-  }
-
-  function _pendingSimpleTarget() {
-    var task = _credentialCurrent
-    return task && task.provider === "simplelogin" && task.payload
-      ? Number(task.payload.aliasId || 0) : 0
+    var pending = task && task.provider === provider ? task : null
+    var pendingEntry = pending ? _providerActions[pending.action] : null
+    var pendingOperation = pendingEntry ? pendingEntry.label : ""
+    if (provider === "duckduckgo") {
+      return {
+        operation: duckAdapter.operation !== "" ? duckAdapter.operation : pendingOperation,
+        targetAddress: duckAdapter.targetAddress !== "" ? duckAdapter.targetAddress
+          : (pending && pending.payload ? String(pending.payload.address || "") : ""),
+        error: _duckError !== "" ? _duckError : duckAdapter.error
+      }
+    }
+    var running = simpleAdapter.operation !== ""
+    return {
+      operation: running ? simpleAdapter.operation : pendingOperation,
+      targetAliasId: running ? simpleAdapter.targetAliasId
+        : (pending && pending.payload ? Number(pending.payload.aliasId || 0) : 0),
+      error: _simpleError !== "" ? _simpleError : simpleAdapter.error
+    }
   }
 
   function _saveState(next) {

@@ -25,7 +25,7 @@ Item {
   property string duckCredentialState: "loading"
   readonly property bool duckBusy: duckAdapter.busy
   readonly property string duckOperation: duckAdapter.operation !== ""
-    ? duckAdapter.operation : _pendingDuckOperation()
+    ? duckAdapter.operation : _pendingOperation("duckduckgo")
   readonly property string duckTargetAddress: duckAdapter.targetAddress !== ""
     ? duckAdapter.targetAddress : _pendingDuckTarget()
   property bool duckRemoteAvailable: true
@@ -35,7 +35,7 @@ Item {
   property string simpleCredentialState: "loading"
   readonly property bool simpleBusy: simpleAdapter.busy
   readonly property string simpleOperation: simpleAdapter.operation !== ""
-    ? simpleAdapter.operation : _pendingSimpleOperation()
+    ? simpleAdapter.operation : _pendingOperation("simplelogin")
   readonly property int simpleTargetAliasId: simpleAdapter.operation !== ""
     ? simpleAdapter.targetAliasId : _pendingSimpleTarget()
   property string _simpleError: ""
@@ -56,6 +56,52 @@ Item {
   property var _credentialTasks: []
   property var _credentialCurrent: null
   property var _quickCreate: null
+
+  // Credential-gated provider actions, keyed by the action string carried by
+  // each queued credential task. `dispatch` runs the adapter call once the
+  // credential arrives; `label` is the in-flight operation name shown in the
+  // UI while the lookup is still queued.
+  readonly property var _providerActions: ({
+    "duck-generate": {
+      label: "generate",
+      dispatch: function(token, payload) { duckAdapter.generate(token) }
+    },
+    "duck-status": {
+      label: "status",
+      dispatch: function(token, payload) { duckAdapter.fetchStatus(token, payload.address) }
+    },
+    "duck-active": {
+      label: "setActive",
+      dispatch: function(token, payload) { duckAdapter.setActive(token, payload.address, payload.active) }
+    },
+    "simple-list": {
+      label: "aliases",
+      dispatch: function(token, payload) { simpleAdapter.searchAliases(token, payload.query, payload.filter, payload.page) }
+    },
+    "simple-random": {
+      label: "random",
+      dispatch: function(token, payload) { simpleAdapter.createRandom(token) }
+    },
+    "simple-options": {
+      label: "options",
+      dispatch: function(token, payload) { simpleAdapter.loadCustomOptions(token) }
+    },
+    "simple-custom": {
+      label: "custom",
+      dispatch: function(token, payload) {
+        simpleAdapter.createCustom(token, payload.prefix, payload.signedSuffix,
+          payload.mailboxIds, payload.name, payload.note)
+      }
+    },
+    "simple-pinned": {
+      label: "pinned",
+      dispatch: function(token, payload) { simpleAdapter.setPinned(token, payload.aliasId, payload.pinned) }
+    },
+    "simple-toggle": {
+      label: "toggle",
+      dispatch: function(token, payload) { simpleAdapter.toggle(token, payload.aliasId) }
+    }
+  })
 
   function _providerLabel(provider) {
     if (provider === "maildrop") return "Maildrop"
@@ -180,33 +226,17 @@ Item {
     return "started"
   }
 
-  function _pendingDuckOperation() {
+  function _pendingOperation(provider) {
     var task = _credentialCurrent
-    if (!task || task.provider !== "duckduckgo") return ""
-    if (task.action === "duck-generate") return "generate"
-    if (task.action === "duck-status") return "status"
-    if (task.action === "duck-active") return "setActive"
-    return ""
+    if (!task || task.provider !== provider) return ""
+    var entry = _providerActions[task.action]
+    return entry ? entry.label : ""
   }
 
   function _pendingDuckTarget() {
     var task = _credentialCurrent
     return task && task.provider === "duckduckgo" && task.payload
       ? String(task.payload.address || "") : ""
-  }
-
-  function _pendingSimpleOperation() {
-    var task = _credentialCurrent
-    if (!task || task.provider !== "simplelogin") return ""
-    var actions = {
-      "simple-list": "aliases",
-      "simple-random": "random",
-      "simple-options": "options",
-      "simple-custom": "custom",
-      "simple-pinned": "pinned",
-      "simple-toggle": "toggle"
-    }
-    return String(actions[task.action] || "")
   }
 
   function _pendingSimpleTarget() {
@@ -566,17 +596,8 @@ Item {
   }
 
   function _dispatchProviderAction(action, token, payload) {
-    if (action === "check") return
-    if (action === "duck-generate") duckAdapter.generate(token)
-    else if (action === "duck-status") duckAdapter.fetchStatus(token, payload.address)
-    else if (action === "duck-active") duckAdapter.setActive(token, payload.address, payload.active)
-    else if (action === "simple-list") simpleAdapter.searchAliases(token, payload.query, payload.filter, payload.page)
-    else if (action === "simple-random") simpleAdapter.createRandom(token)
-    else if (action === "simple-options") simpleAdapter.loadCustomOptions(token)
-    else if (action === "simple-custom") simpleAdapter.createCustom(token, payload.prefix,
-      payload.signedSuffix, payload.mailboxIds, payload.name, payload.note)
-    else if (action === "simple-pinned") simpleAdapter.setPinned(token, payload.aliasId, payload.pinned)
-    else if (action === "simple-toggle") simpleAdapter.toggle(token, payload.aliasId)
+    var entry = _providerActions[action]
+    if (entry) entry.dispatch(token, payload)
   }
 
   function _markUnauthorized(provider) {

@@ -1,11 +1,12 @@
 import QtQml
 import Quickshell.Io
+import "../lib"
 import "TemporaryAddress.js" as TemporaryAddressHelper
 
 QtObject {
     id: root
 
-    readonly property bool busy: randomProcess.running
+    readonly property bool busy: randomRunner.busy
     property string error: ""
     property string _provider: ""
 
@@ -23,36 +24,32 @@ QtObject {
 
         error = ""
         _provider = provider
-        randomProcess.running = true
+        randomRunner.start()
         return true
     }
 
-    property Process randomProcess: Process {
+    property ProcessRunner randomRunner: ProcessRunner {
         command: ["/usr/bin/openssl", "rand", "-base64", "12"]
-        stdout: StdioCollector {}
-        stderr: StdioCollector {}
 
-        onRunningChanged: {
-            if (!running && root._provider !== "") {
-                root.error = "Could not start openssl"
-                root._provider = ""
-            }
-        }
-
-        onExited: function(exitCode, exitStatus) {
+        onFinished: function(stdoutText, stderrText, exitCode) {
             if (exitCode !== 0) {
                 root.error = "Could not create a short address ID"
                 root._provider = ""
                 return
             }
 
-            var parsed = TemporaryAddressHelper.fromRandom(root._provider, stdout.text)
+            var parsed = TemporaryAddressHelper.fromRandom(root._provider, stdoutText)
             root._provider = ""
             if (!parsed.ok) {
                 root.error = parsed.error
                 return
             }
             root.created(parsed.value)
+        }
+
+        onStartFailed: {
+            root.error = "Could not start openssl"
+            root._provider = ""
         }
     }
 }

@@ -7,12 +7,11 @@ QtObject {
     id: root
 
     readonly property string applicationAttribute: "io.github.ajanraj.disposable-email"
-    readonly property bool busy: _operation !== "" || _process.running
+    readonly property bool busy: _operation !== "" || _runner.busy
     readonly property string operation: _operation
     property string _operation: ""
     property string _provider: ""
     property string _pendingToken: ""
-    property bool _handled: false
 
     signal lookupSucceeded(string provider, string token)
     signal lookupFailed(string provider, string error)
@@ -56,10 +55,10 @@ QtObject {
 
         root._operation = operation
         root._provider = provider
-        root._handled = false
-        root._process.command = _command(operation, provider)
-        root._process.stdinEnabled = operation === "store"
-        root._process.running = true
+        root._runner.command = _command(operation, provider)
+        root._runner.stdinData = operation === "store" ? root._pendingToken : ""
+        root._pendingToken = ""
+        root._runner.start()
         return true
     }
 
@@ -81,19 +80,14 @@ QtObject {
             return false
         }
 
-        // Keep the token only until Process.onStarted writes it to stdin. It
-        // is cleared again on every completion/error path below.
+        // Keep the token only until ProcessRunner writes it to stdin on launch.
+        // It is cleared again on every completion/error path below.
         root._pendingToken = token
         return _start("store", provider)
     }
 
     function clear(provider) {
         return _start("clear", provider)
-    }
-
-    function _errorMessage(fallback) {
-        var text = String(root._process.stderr.text || "").trim()
-        return text.length > 0 ? text : fallback
     }
 
     function _clearCurrent() {
@@ -111,22 +105,19 @@ QtObject {
         return text
     }
 
-    function _finish(exitCode) {
-        if (root._handled || root._operation === "")
+    function _finish(output, stderrText, exitCode) {
+        if (root._operation === "")
             return
-        root._handled = true
 
         var operation = root._operation
         var provider = root._provider
-        var output = root._process.stdout.text
-        var stderrText = String(root._process.stderr.text || "").trim()
-        var error = stderrText.length > 0 ? stderrText : "Credential operation failed"
-        root._pendingToken = ""
+        var stderrClean = String(stderrText || "").trim()
+        var error = stderrClean.length > 0 ? stderrClean : "Credential operation failed"
 
         if (exitCode !== 0) {
             // Clearing a missing item is already the desired end state.
-            if (operation === "clear" && exitCode === 1 && stderrText.length === 0) {
-                clearSucceeded(provider)
+            if (operation === "clear" && exitCode === 1 && stderrClean.length === 0) {
+                clearSucceeded(provider, true)
                 _clearCurrent()
                 return
             }
@@ -153,51 +144,10 @@ QtObject {
         _clearCurrent()
     }
 
-    property Process _process: Process {
-        command: []
-        running: false
-        stdinEnabled: true
-        stdout: StdioCollector {
-            waitForEnd: true
+    property ProcessRunner _runner: ProcessRunner {
+        onFinished: function(stdoutText, stderrText, exitCode) {
+            root._finish(stdoutText, stderrText, exitCode)
         }
-        stderr: StdioCollector {
-            waitForEnd: true
-        }
-
-        onStarted: {
-            if (root._operation !== "store")
-                return
-
-            var token = root._pendingToken
-            root._pendingToken = ""
-            try {
-                // Deliberately no newline: Secret Service receives the exact
-                // token entered by the user and stdin is closed immediately.
-                write(token)
-            } finally {
-                token = ""
-                stdinEnabled = false
-            }
-        }
-
-        onExited: function(exitCode, exitStatus) {
-            root._pendingToken = ""
-            root._finish(exitCode)
-        }
-
-        onRunningChanged: {
-            if (running || root._operation === "" || root._handled)
-                return
-
-            // Process emits onExited for normal completion. Defer this check
-            // one turn so a failed-to-start process still gets a result while
-            // an ordinary exit is handled by onExited first.
-            Qt.callLater(function() {
-                if (!root._process.running && root._operation !== "" && !root._handled) {
-                    root._pendingToken = ""
-                    root._finish(-1)
-                }
-            })
-        }
+        onStartFailed: root._finish("", "", -1)
     }
 }

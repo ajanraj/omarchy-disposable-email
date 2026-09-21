@@ -3,6 +3,10 @@
 var API_URL = "https://app.simplelogin.io/api"
 var DEFAULT_NOTE = "Created with Disposable Email"
 
+// SimpleLogin reports free-plan/quota failures with these statuses; 401 is
+// excluded because it means an invalid API key, handled as unauthorized.
+var PLAN_LIMIT_STATUSES = [400, 402, 403]
+
 function auth(token) {
     if (!Http.isSafeCredential(token))
         return { ok: false, error: "SimpleLogin API key is missing or invalid" }
@@ -282,7 +286,7 @@ function parseToggle(output, aliasId) {
 }
 
 function isPlanLimit(response) {
-    if (!response || response.ok || [400, 402, 403].indexOf(response.status) === -1)
+    if (!response || response.ok || PLAN_LIMIT_STATUSES.indexOf(response.status) === -1)
         return false
     return /(limit|quota|premium|upgrade|free (plan|account)|paid plan|maximum number of aliases)/i.test(response.error || "")
 }

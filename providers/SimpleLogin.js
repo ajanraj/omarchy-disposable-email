@@ -180,14 +180,6 @@ function parseAlias(output) {
     return response
 }
 
-function parseOptions(output) {
-    return parseOptionsFromResponse(Http.parseResponse(output))
-}
-
-function parseMailboxes(output) {
-    return parseMailboxesFromResponse(Http.parseResponse(output))
-}
-
 function parseCustomOptions(output) {
     var combined = Http.parseResponses(output, 2)
     if (!combined.ok)

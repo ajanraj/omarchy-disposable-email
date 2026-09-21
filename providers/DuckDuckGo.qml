@@ -1,16 +1,16 @@
 import QtQml
 import Quickshell.Io
+import "../lib"
 import "DuckDuckGo.js" as DuckHelper
 
 QtObject {
     id: root
 
-    readonly property bool busy: curlProcess.running
+    readonly property bool busy: curlRunner.busy
     readonly property string operation: _operation
     readonly property string targetAddress: _localPart === "" ? "" : _localPart + "@duck.com"
     property string error: ""
     property string _operation: ""
-    property string _config: ""
     property string _localPart: ""
     property bool _requestedActive: false
 
@@ -47,9 +47,8 @@ QtObject {
         _operation = operation
         _localPart = built.localPart
         _requestedActive = active
-        _config = built.config
-        curlProcess.stdinEnabled = true
-        curlProcess.running = true
+        curlRunner.stdinData = built.config
+        curlRunner.start()
         return true
     }
 
@@ -81,33 +80,16 @@ QtObject {
             activeChanged(parsed.value)
     }
 
-    property Process curlProcess: Process {
+    property ProcessRunner curlRunner: ProcessRunner {
         command: ["/usr/bin/curl", "-q", "--config", "-"]
-        stdout: StdioCollector {}
-        stderr: StdioCollector {}
 
-        onStarted: {
-            var config = root._config
-            root._config = ""
-            try {
-                write(config)
-            } finally {
-                config = ""
-                stdinEnabled = false
-            }
+        onFinished: function(stdoutText, stderrText, exitCode) {
+            root._finish(stdoutText, exitCode)
         }
 
-        onRunningChanged: {
-            if (!running && root._operation !== "") {
-                root._config = ""
-                root._operation = ""
-                root.error = "Could not start curl"
-            }
-        }
-
-        onExited: function(exitCode, exitStatus) {
-            root._config = ""
-            root._finish(stdout.text, exitCode)
+        onStartFailed: {
+            root._operation = ""
+            root.error = "Could not start curl"
         }
     }
 }

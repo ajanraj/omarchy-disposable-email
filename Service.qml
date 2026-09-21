@@ -242,7 +242,7 @@ Item {
   }
 
   function _queueCopy(text, quick) {
-    if (copyProcess.running || _clipboardScheduled) {
+    if (copyRunner.busy || _clipboardScheduled) {
       var next = _clipboardQueue.slice()
       var item = { text: text, quick: quick === true }
       // Preserve a pending shortcut result, but coalesce rapid manual copies
@@ -258,19 +258,14 @@ Item {
   }
 
   function _startCopy(text, quick) {
-    _activeClipboardText = text
     _activeClipboardQuick = quick === true
-    _clipboardHandled = false
-    copyProcess.stdinEnabled = true
-    copyProcess.running = true
+    copyRunner.stdinData = text
+    copyRunner.start()
   }
 
   function _finishClipboard(exitCode) {
-    if (_clipboardHandled) return
-    _clipboardHandled = true
     var wasQuick = _activeClipboardQuick
     _activeClipboardQuick = false
-    _activeClipboardText = ""
 
     if (wasQuick && _quickCreate) {
       if (exitCode === 0) {
@@ -606,36 +601,19 @@ Item {
     simpleAliases = next
   }
 
-  property string _activeClipboardText: ""
   property bool _activeClipboardQuick: false
-  property bool _clipboardHandled: true
   property bool _clipboardScheduled: false
   property var _clipboardQueue: []
 
-  Process {
-    id: copyProcess
+  ProcessRunner {
+    id: copyRunner
     command: ["/usr/bin/wl-copy"]
-    stdinEnabled: true
 
-    onStarted: {
-      var value = root._activeClipboardText
-      root._activeClipboardText = ""
-      write(value)
-      value = ""
-      stdinEnabled = false
-    }
-
-    onExited: function(exitCode, exitStatus) {
+    onFinished: function(stdoutText, stderrText, exitCode) {
       root._finishClipboard(exitCode)
     }
 
-    onRunningChanged: {
-      if (running || root._activeClipboardText === "" || root._clipboardHandled) return
-      Qt.callLater(function() {
-        if (!copyProcess.running && root._activeClipboardText !== ""
-            && !root._clipboardHandled) root._finishClipboard(-1)
-      })
-    }
+    onStartFailed: root._finishClipboard(-1)
   }
 
   StateStore {

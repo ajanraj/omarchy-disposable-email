@@ -3,18 +3,11 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
-ColumnLayout {
+ProviderView {
   id: root
-  required property var service
-  required property var requestConfirmation
 
-  width: parent ? parent.width : implicitWidth
-  height: parent ? parent.height : implicitHeight
-  spacing: Style.space(12)
+  credentialState: service ? String(service.duckCredentialState || "") : ""
 
-  readonly property string credentialState: service ? String(service.duckCredentialState || "") : ""
-  readonly property bool connected: credentialState === "connected" || credentialState === "available" || credentialState === "ready"
-  readonly property bool configured: connected || credentialState === "attention"
   readonly property bool fullPanelHeight: root.configured
 
   PanelSectionHeader {
@@ -92,7 +85,7 @@ ColumnLayout {
       iconText: generating ? "󰦖" : (!root.service.duckRemoteAvailable ? "󰑓" : "+")
       iconSpinning: generating
       focusable: true
-      enabled: root.connected && !root.service.actionBusy
+      enabled: root.canAct
       onClicked: {
         if (!root.service.duckRemoteAvailable) root.service.retryDuckRequests()
         root.service.generateDuck()
@@ -126,7 +119,7 @@ ColumnLayout {
               text: refreshing ? "Refreshing..." : "Refresh",
               icon: refreshing ? "󰦖" : "󰑓",
               busy: refreshing,
-              enabled: root.connected && !root.service.actionBusy
+              enabled: root.canAct
             },
             {
               id: "toggle",
@@ -135,7 +128,7 @@ ColumnLayout {
               icon: updating ? "󰦖" : "",
               busy: updating,
               destructive: activeAlias,
-              enabled: root.connected && root.service.duckRemoteAvailable && !root.service.actionBusy
+              enabled: root.canAct && root.service.duckRemoteAvailable
             }
           ]
           onCopyRequested: root.service.copyText(address)

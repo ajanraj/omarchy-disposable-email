@@ -3,22 +3,15 @@ import QtQuick.Layouts
 import qs.Commons
 import qs.Ui
 
-ColumnLayout {
+ProviderView {
   id: root
-  required property var service
-  required property var requestConfirmation
 
-  width: parent ? parent.width : implicitWidth
-  height: parent ? parent.height : implicitHeight
-  spacing: Style.space(12)
+  credentialState: service ? String(service.simpleCredentialState || "") : ""
 
   property bool customVisible: false
   property int page: 0
   property var selectedMailboxIds: []
   property bool controlsReady: false
-  readonly property string credentialState: service ? String(service.simpleCredentialState || "") : ""
-  readonly property bool connected: credentialState === "connected" || credentialState === "available" || credentialState === "ready"
-  readonly property bool configured: connected || credentialState === "attention"
   readonly property bool fullPanelHeight: root.configured
 
   Component.onCompleted: controlsReady = true
@@ -132,7 +125,7 @@ ColumnLayout {
         iconText: creating ? "󰦖" : "+"
         iconSpinning: creating
         focusable: true
-        enabled: root.connected && root.service.simpleCanCreate && !root.service.actionBusy
+        enabled: root.canAct && root.service.simpleCanCreate
         onClicked: root.service.createSimpleRandom()
       }
 
@@ -143,7 +136,7 @@ ColumnLayout {
         iconText: loading ? "󰦖" : "󰅖"
         iconSpinning: loading
         focusable: true
-        enabled: root.connected && root.service.simpleCanCreate && !root.service.actionBusy
+        enabled: root.canAct && root.service.simpleCanCreate
         onClicked: {
           root.customVisible = !root.customVisible
           if (root.customVisible) root.service.prepareSimpleCustom()
@@ -203,7 +196,7 @@ ColumnLayout {
         iconText: creating ? "󰦖" : "+"
         iconSpinning: creating
         focusable: true
-        enabled: root.connected && prefixField.text.trim().length > 0 && suffixDropdown.value !== "" && root.selectedMailboxIds.length > 0 && !root.service.actionBusy
+        enabled: root.canAct && prefixField.text.trim().length > 0 && suffixDropdown.value !== "" && root.selectedMailboxIds.length > 0
         onClicked: {
           var mailboxIds = []
           for (var i = 0; i < root.selectedMailboxIds.length; i++)
@@ -256,7 +249,7 @@ ColumnLayout {
         iconSpinning: root.service.simpleOperation === "aliases"
         tooltipText: root.service.simpleOperation === "aliases" ? "Refreshing aliases" : "Refresh aliases"
         focusable: true
-        enabled: root.connected && !root.service.actionBusy
+        enabled: root.canAct
         onClicked: root.refresh()
       }
     }
@@ -293,7 +286,7 @@ ColumnLayout {
               text: savingPin ? "Saving..." : (pinnedAlias ? "Unpin" : "Pin"),
               icon: savingPin ? "󰦖" : "",
               busy: savingPin,
-              enabled: root.connected && !root.service.actionBusy
+              enabled: root.canAct
             },
             {
               id: "toggle",
@@ -302,7 +295,7 @@ ColumnLayout {
               icon: updating ? "󰦖" : "",
               busy: updating,
               destructive: enabledAlias,
-              enabled: root.connected && !root.service.actionBusy
+              enabled: root.canAct
             }
           ]
           onCopyRequested: root.service.copyText(address)
@@ -329,7 +322,7 @@ ColumnLayout {
       Button {
         text: "Previous"
         focusable: true
-        enabled: root.connected && root.page > 0 && !root.service.actionBusy
+        enabled: root.canAct && root.page > 0
         onClicked: { root.page--; root.refresh() }
       }
 
@@ -344,7 +337,7 @@ ColumnLayout {
       Button {
         text: "Next"
         focusable: true
-        enabled: root.connected && root.service.simpleAliases && root.service.simpleAliases.length === 20 && !root.service.actionBusy
+        enabled: root.canAct && root.service.simpleAliases && root.service.simpleAliases.length === 20
         onClicked: { root.page++; root.refresh() }
       }
     }

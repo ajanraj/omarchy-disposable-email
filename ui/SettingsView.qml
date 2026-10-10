@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 Column {
@@ -16,7 +17,7 @@ Column {
   Text {
     width: parent.width
     text: "Reset removes saved credentials, temporary address history, remembered Duck aliases, and local preferences. It never changes remote aliases or inboxes."
-    color: Color.muted
+    color: Commons.Color.muted
     font.family: Style.font.family
     font.pixelSize: Style.font.bodySmall
     wrapMode: Text.WordWrap
@@ -27,7 +28,7 @@ Column {
     iconText: "󰆴"
     focusable: true
     enabled: !root.service.actionBusy
-    foreground: Color.urgent
+    foreground: Commons.Color.urgent
     onClicked: root.requestConfirmation("Reset all Disposable Email plugin data? This cannot be undone.", function() { root.service.resetPluginData() }, "Reset")
   }
 }

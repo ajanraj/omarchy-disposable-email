@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 ProviderView {
@@ -71,7 +72,7 @@ ProviderView {
     Text {
       Layout.fillWidth: true
       text: "Open setup, create an API key, then paste it below. The key is handed directly to the service and cleared from this form."
-      color: Color.muted
+      color: Commons.Color.muted
       font.family: Style.font.family
       font.pixelSize: Style.font.bodySmall
       wrapMode: Text.WordWrap
@@ -276,7 +277,7 @@ ProviderView {
           providerLabel: "SimpleLogin"
           address: String(modelData.email || "")
           statusText: enabledAlias ? "Enabled" : "Disabled"
-          statusColor: enabledAlias ? Color.accent : Color.muted
+          statusColor: enabledAlias ? Commons.Color.accent : Commons.Color.muted
           detailText: "Mailbox: " + mailbox + (counters ? "  |  " + counters : "")
           showForget: false
           actions: [
@@ -328,7 +329,7 @@ ProviderView {
 
       Text {
         text: "Page " + (root.page + 1)
-        color: Color.muted
+        color: Commons.Color.muted
         font.family: Style.font.family
         font.pixelSize: Style.font.body
         anchors.verticalCenter: parent.verticalCenter
@@ -351,7 +352,7 @@ ProviderView {
       iconText: "󰌙"
       focusable: true
       enabled: !root.service.actionBusy
-      foreground: Color.urgent
+      foreground: Commons.Color.urgent
       onClicked: root.requestConfirmation(
         "Disconnect SimpleLogin and remove its saved API key? Cached aliases will be cleared.",
         function() { root.service.disconnectProvider("simplelogin") },

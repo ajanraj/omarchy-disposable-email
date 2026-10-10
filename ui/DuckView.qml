@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 ProviderView {
@@ -34,7 +35,7 @@ ProviderView {
     Text {
       Layout.fillWidth: true
       text: "Open setup, sign in, then open DevTools Network. Generate a private address and copy the Authorization value after Bearer."
-      color: Color.muted
+      color: Commons.Color.muted
       font.family: Style.font.family
       font.pixelSize: Style.font.bodySmall
       wrapMode: Text.WordWrap
@@ -111,7 +112,7 @@ ProviderView {
           providerLabel: "DuckDuckGo"
           address: String(modelData.address || "")
           statusText: activeAlias ? "Active" : "Inactive"
-          statusColor: activeAlias ? Color.accent : Color.muted
+          statusColor: activeAlias ? Commons.Color.accent : Commons.Color.muted
           actions: [
             {
               id: "refresh",
@@ -161,7 +162,7 @@ ProviderView {
       iconText: "󰌙"
       focusable: true
       enabled: !root.service.actionBusy
-      foreground: Color.urgent
+      foreground: Commons.Color.urgent
       onClicked: root.requestConfirmation(
         "Disconnect DuckDuckGo and remove its saved token? Known aliases will be forgotten locally.",
         function() { root.service.disconnectProvider("duckduckgo") },

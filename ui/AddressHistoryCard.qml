@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 Rectangle {
@@ -8,7 +9,7 @@ Rectangle {
   required property string providerLabel
   required property string address
   property string statusText: ""
-  property color statusColor: Color.muted
+  property color statusColor: Commons.Color.muted
   property string detailText: ""
   property bool showOpen: false
   property bool showForget: true
@@ -22,7 +23,7 @@ Rectangle {
   width: parent ? parent.width : implicitWidth
   implicitHeight: content.implicitHeight + Style.space(16)
   radius: Style.cornerRadius
-  color: Util.alpha(Color.foreground, 0.05)
+  color: Util.alpha(Commons.Color.foreground, 0.05)
 
   Column {
     id: content
@@ -40,13 +41,13 @@ Rectangle {
         implicitWidth: providerText.implicitWidth + Style.space(12)
         implicitHeight: providerText.implicitHeight + Style.space(5)
         radius: implicitHeight / 2
-        color: Util.alpha(Color.accent, 0.14)
+        color: Util.alpha(Commons.Color.accent, 0.14)
 
         Text {
           id: providerText
           anchors.centerIn: parent
           text: root.providerLabel
-          color: Color.accent
+          color: Commons.Color.accent
           font.family: Style.font.family
           font.pixelSize: Style.font.caption
           font.bold: true
@@ -68,7 +69,7 @@ Rectangle {
     Text {
       width: parent.width
       text: root.address
-      color: Color.foreground
+      color: Commons.Color.foreground
       font.family: Style.font.family
       font.pixelSize: Style.font.body
       font.bold: true
@@ -79,7 +80,7 @@ Rectangle {
       visible: root.detailText !== ""
       width: parent.width
       text: root.detailText
-      color: Color.muted
+      color: Commons.Color.muted
       font.family: Style.font.family
       font.pixelSize: Style.font.caption
       elide: Text.ElideRight
@@ -115,7 +116,7 @@ Rectangle {
           iconSpinning: modelData.busy === true
           focusable: true
           enabled: modelData.enabled !== false
-          foreground: modelData.destructive === true ? Color.urgent : Color.foreground
+          foreground: modelData.destructive === true ? Commons.Color.urgent : Commons.Color.foreground
           onClicked: root.actionRequested(String(modelData.id || ""))
         }
       }
@@ -125,7 +126,7 @@ Rectangle {
         width: Style.space(82)
         text: "Forget"
         focusable: true
-        foreground: Color.urgent
+        foreground: Commons.Color.urgent
         onClicked: root.forgetRequested()
       }
     }

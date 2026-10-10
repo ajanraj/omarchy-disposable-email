@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls as QQC
 import QtQuick.Layouts
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 
 ColumnLayout {
@@ -45,7 +46,7 @@ ColumnLayout {
       anchors.centerIn: parent
       width: parent.width
       text: root.emptyText
-      color: Color.muted
+      color: Commons.Color.muted
       font.family: Style.font.family
       font.pixelSize: Style.font.body
       horizontalAlignment: Text.AlignHCenter

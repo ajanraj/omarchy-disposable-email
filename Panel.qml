@@ -1,5 +1,6 @@
 import QtQuick
 import qs.Commons
+import qs.Commons as Commons
 import qs.Ui
 import "ui"
 
@@ -14,7 +15,7 @@ Panel {
   property int activeTab: tabIndex(service ? service.lastTab : "temporary")
   property bool settingsVisible: false
   readonly property var barIdentity: hostWidget || root
-  readonly property color foreground: bar ? bar.foreground : Color.popups.text
+  readonly property color foreground: bar ? bar.foreground : Commons.Color.popups.text
   readonly property string fontFamily: bar ? bar.fontFamily : Style.font.family
 
   function tabIndex(tab) {
@@ -148,7 +149,7 @@ Panel {
             visible: !root.service
             width: parent.width
             text: "Disposable Email service is not available."
-            color: Color.urgent
+            color: Commons.Color.urgent
             font.family: root.fontFamily
             font.pixelSize: Style.font.body
             horizontalAlignment: Text.AlignHCenter
@@ -176,7 +177,7 @@ Panel {
         id: confirmDialog
         anchors.fill: parent
         foreground: root.foreground
-        background: Color.popups.background
+        background: Commons.Color.popups.background
         onCanceled: {
           opened = false
           root.pendingAction = null
